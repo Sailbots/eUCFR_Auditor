@@ -1,0 +1,2321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>eUCFR Viewer</title>
+<style>
+/* Palette and base styles shared with the Watchbill app (Slate theme). */
+:root{
+  --deck:#1b2126; --panel:#232b31; --panel-2:#2b343b;
+  --rule:#3a444c; --rule-soft:#2f383f;
+  --ink:#e9ecee; --muted:#95a0a8;
+  --brass:#d3a03c; --port:#d1495b; --stbd:#4a9d75; --warn:#c98b2e;
+  --accent-hi:#e0ad48; --on-accent:#1b2126; --edge:#4b5760;
+  --conflict-bg:rgba(209,73,91,.16); --conflict-ink:#f19aa5;
+  --nopool-bg:rgba(201,139,46,.10); --breach-bg:rgba(209,73,91,.10);
+  --active-tint:rgba(211,160,60,.14);
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--deck);color:var(--ink)}
+body{font-family:var(--sans);-webkit-font-smoothing:antialiased;padding:22px}
+input,select,button{font:inherit;color:inherit}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
+h1,h2,h3,h4,p,ul{margin:0}
+[hidden]{display:none!important}
+
+/* Themes (same set as the Watchbill app) */
+.decor{display:none}
+:root[data-view="print"] .decor{display:none!important}
+
+:root[data-theme="halloween"]{
+  --deck:#141019; --panel:#1e1726; --panel-2:#2a2034;
+  --rule:#453754; --rule-soft:#332943;
+  --ink:#f4ebe0; --muted:#a48cba;
+  --brass:#ff8b25; --port:#e0435c; --stbd:#7bd66a; --warn:#ffc44d;
+  --accent-hi:#ffa04d;
+  --on-accent:#1a1020;
+  --on-accent-2:#4a2a08;
+  --edge:#6d5786;
+  --night:#181222;
+  --night-2:#1c1527;
+  --blank:#171122;
+  --weekend:#191325;
+  --today:#2b1c36;
+  --today-active:#3c2647;
+  --holiday:#8a5cf6;
+  --console-bg:#120e18;
+  --conflict-bg:rgba(224,67,92,.18);
+  --conflict-ink:#ff9db0;
+  --nopool-bg:rgba(255,196,77,.12);
+  --breach-bg:rgba(224,67,92,.12);
+  --active-tint:rgba(255,139,37,.16);
+}
+/* Copyright (c) 2026 James Coleman. MIT License */
+:root[data-theme="halloween"] .decor{display:block;position:fixed;inset:0;z-index:1;
+  pointer-events:none}
+:root[data-theme="halloween"] .decor .d1,
+:root[data-theme="halloween"] .decor .d2{position:absolute;top:0;width:150px;height:150px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cg fill='none' stroke='%23ffb066' stroke-width='1.1'%3E%3Cpath d='M0 0 L150 0 M0 0 L139 58 M0 0 L106 106 M0 0 L58 139 M0 0 L0 150'/%3E%3Cpath d='M34 0 A34 34 0 0 1 0 34'/%3E%3Cpath d='M68 0 A68 68 0 0 1 0 68'/%3E%3Cpath d='M104 0 A104 104 0 0 1 0 104'/%3E%3Cpath d='M142 0 A142 142 0 0 1 0 142'/%3E%3C/g%3E%3C/svg%3E") no-repeat;opacity:.22}
+:root[data-theme="halloween"] .decor .d1{left:0}
+:root[data-theme="halloween"] .decor .d2{right:0;transform:scaleX(-1)}
+:root[data-theme="halloween"] .decor .d3{position:absolute;top:26px;left:50%;
+  transform:translateX(-50%);width:220px;height:16px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='16' viewBox='0 0 30 16'%3E%3Cpath fill='%23b98cf0' d='M15 3.4c1.1 0 1.8.9 2.1 1.9C18.4 3.4 20.7 1.7 23.5 1.7c-.8 1.4-.7 2.8-.2 3.8 1-.6 2.5-.7 3.9-.2-1.6.7-2.8 2.1-3.5 3.7-.9 2.2-3 3.7-5.3 3.7-1.6 0-2.8-.8-3.4-1.8-.6 1-1.8 1.8-3.4 1.8-2.3 0-4.4-1.5-5.3-3.7C5.6 7.4 4.4 6 2.8 5.3c1.4-.5 2.9-.4 3.9.2.5-1 .6-2.4-.2-3.8C9.3 1.7 11.6 3.4 12.9 5.3 13.2 4.3 13.9 3.4 15 3.4z'/%3E%3C/svg%3E") repeat-x;background-size:74px 16px;opacity:.5;
+  animation:flit 7s ease-in-out infinite}
+@keyframes flit{0%,100%{transform:translateX(-50%) translateY(0)}
+  50%{transform:translateX(-46%) translateY(7px)}}
+:root[data-theme="halloween"] .eyebrow::before{content:"";display:inline-block;width:16px;height:16px;
+  margin-right:7px;vertical-align:-3px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 22 22'%3E%3Cpath fill='%23ff8b25' d='M11 5c-3.3 0-6 2.9-6 7s2.7 7 6 7 6-2.9 6-7-2.7-7-6-7z'/%3E%3Cpath fill='%234a7a3a' d='M10.3 2.2h1.4v3.2h-1.4z'/%3E%3Cpath fill='%23241a2e' d='M8.3 9.6l1.5 2.2H6.8zm5.4 0l1.5 2.2h-3zM7.2 14.4h7.6c-.6 1.6-2 2.6-3.8 2.6s-3.2-1-3.8-2.6z'/%3E%3C/svg%3E") no-repeat center/contain}
+:root[data-theme="halloween"] .toptab[aria-selected="true"]{box-shadow:0 0 14px rgba(255,139,37,.28)}
+:root[data-theme="halloween"] .calday.today{box-shadow:inset 0 0 0 1px var(--stbd)}
+:root[data-theme="halloween"] .btn-primary{box-shadow:0 0 10px rgba(255,139,37,.35)}
+:root[data-theme="halloween"] .mast{border-bottom-color:var(--brass)}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="halloween"] .decor .d3{animation:none}
+}
+
+:root[data-theme="submarines"]{
+  color-scheme:light;
+  --deck:#fff2f8; --panel:#ffffff; --panel-2:#ffe1ef;
+  --rule:#f3b4d3; --rule-soft:#fbd8e8;
+  --ink:#4a1533; --muted:#9c5f81;
+  --brass:#e5399b; --port:#c62741; --stbd:#0f8a6a; --warn:#a96a0c;
+  --accent-hi:#c92a84;
+  --on-accent:#ffffff;
+  --on-accent-2:#ffe1ef;
+  --edge:#e07cb0;
+  --night:#fbe0f0;
+  --night-2:#f7d3e7;
+  --blank:#fce9f3;
+  --weekend:#fde7f3;
+  --today:#d5f4e7;
+  --today-active:#c4ecdb;
+  --holiday:#8b5cf6;
+  --console-bg:#ffffff;
+  --conflict-bg:rgba(198,39,65,.12);
+  --conflict-ink:#8f1a2e;
+  --nopool-bg:rgba(169,106,12,.14);
+  --breach-bg:rgba(198,39,65,.08);
+  --active-tint:rgba(229,57,155,.14);
+}
+:root[data-theme="submarines"] .decor{display:block;position:fixed;inset:0;z-index:1;pointer-events:none}
+:root[data-theme="submarines"] .decor .d1{position:absolute;top:0;left:0;right:0;height:26px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='26' viewBox='0 0 120 26'%3E%3Cpath d='M18 21c-6-4.5-10-8-10-12a5 5 0 0 1 10-2 5 5 0 0 1 10 2c0 4-4 7.5-10 12z' fill='%23f472b6'/%3E%3Cpath d='M58 6l1.9 5.1L65 13l-5.1 1.9L58 20l-1.9-5.1L51 13l5.1-1.9z' fill='%23fbbf24'/%3E%3Cpath d='M92 20c-4.6-3.5-7.6-6.2-7.6-9.2a3.8 3.8 0 0 1 7.6-1.5 3.8 3.8 0 0 1 7.6 1.5c0 3-3 5.7-7.6 9.2z' fill='%23c084fc'/%3E%3Cpath d='M112 8l1.3 3.4 3.4 1.3-3.4 1.3-1.3 3.4-1.3-3.4-3.4-1.3 3.4-1.3z' fill='%23f9a8d4'/%3E%3Cpath d='M36 9l1.3 3.4 3.4 1.3-3.4 1.3L36 18.4l-1.3-3.4L31.3 13.7l3.4-1.3z' fill='%2367e8f9'/%3E%3C/svg%3E") repeat-x;background-size:120px 26px;opacity:.55;
+  animation:twinkle 3.4s ease-in-out infinite}
+:root[data-theme="submarines"] .decor .d4{position:absolute;bottom:10px;right:20px;width:84px;height:128px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='128' viewBox='0 0 84 128'%3E%3Cpath d='M26 26Q22 6 42 6Q62 6 58 26Q58 44 52 50L32 50Q26 44 26 26Z' fill='%23c2410c'/%3E%3Ccircle cx='42' cy='27' r='13' fill='%23fcd9c2'/%3E%3Cpath d='M42 39Q54 47 51 66L33 66Q30 47 42 39Z' fill='%23f9a8d4'/%3E%3Cpath d='M33 66Q29 92 42 104Q55 92 51 66Z' fill='%235eead4'/%3E%3Cpath d='M42 104Q22 112 18 126Q42 118 42 108Q42 118 66 126Q62 112 42 104Z' fill='%232dd4bf'/%3E%3C/svg%3E") no-repeat;opacity:.4;animation:bob 5s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.55}50%{opacity:.3}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+:root[data-theme="submarines"] .toptab[aria-selected="true"]{box-shadow:0 2px 12px rgba(229,57,155,.22)}
+:root[data-theme="submarines"] .mast{border-bottom-color:var(--brass)}
+:root[data-theme="submarines"] .eyebrow::before{content:"";display:inline-block;width:14px;height:14px;
+  margin-right:7px;vertical-align:-2px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 18C3.4 13 0 9.6 0 5.8A5.4 5.4 0 0 1 10 3a5.4 5.4 0 0 1 10 2.8c0 3.8-3.4 7.2-10 12.2z' fill='%23e5399b'/%3E%3C/svg%3E") no-repeat center/contain}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="submarines"] .decor span{animation:none}
+}
+
+:root[data-theme="chart"]{
+  color-scheme:light;
+  --deck:#f2f6fb; --panel:#ffffff; --panel-2:#e4ecf6;
+  --rule:#b6c6da; --rule-soft:#d8e2ee;
+  --ink:#12243c; --muted:#5d6e85;
+  --brass:#1d4f8f; --port:#b3261e; --stbd:#1c7a4d; --warn:#9a6400;
+  --accent-hi:#163d70;
+  --on-accent:#ffffff;
+  --on-accent-2:#dbe6f4;
+  --edge:#8ea6c2;
+  --night:#e6ecf4;
+  --night-2:#dde6f1;
+  --blank:#e9eef5;
+  --weekend:#e8eff7;
+  --today:#d5ebdd;
+  --today-active:#c7e2d3;
+  --holiday:#2f6fbf;
+  --console-bg:#ffffff;
+  --conflict-bg:rgba(179,38,30,.12);
+  --conflict-ink:#8c1d18;
+  --nopool-bg:rgba(154,100,0,.13);
+  --breach-bg:rgba(179,38,30,.08);
+  --active-tint:rgba(29,79,143,.12);
+}
+
+/* Settings */
+.toptab.gear{margin-left:auto;padding:6px 16px;font-size:24px;letter-spacing:0;line-height:1.1;color:var(--ink)}
+.toptab.gear:hover{color:var(--brass)}
+.themerow{display:flex;flex-wrap:wrap;gap:10px}
+.themecard{background:var(--deck);border:1px solid var(--rule);border-radius:3px;padding:10px 12px;
+  cursor:pointer;text-align:left;min-width:150px}
+.themecard:hover{border-color:var(--edge)}
+.themecard[aria-pressed="true"]{border-color:var(--brass);box-shadow:inset 0 0 0 1px var(--brass)}
+.themecard .nm{display:block;font-size:13px;font-weight:600;margin-bottom:2px}
+.themecard .ds{display:block;font-size:11px;color:var(--muted);margin-bottom:8px}
+.swatches{display:flex;gap:4px}
+.swatches i{width:16px;height:16px;border-radius:2px;border:1px solid rgba(128,128,128,.4);display:block}
+
+.mast{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;
+  border-bottom:2px solid var(--rule);padding-bottom:12px}
+.eyebrow{text-transform:uppercase;letter-spacing:.24em;font-size:10px;font-weight:700;color:var(--brass);margin-bottom:4px}
+#appTitle{font-weight:700;font-size:27px;letter-spacing:.02em;text-transform:uppercase;margin:0}
+.dayline{margin-top:5px;font-size:12px;color:var(--muted)}
+.dayline b{font-family:var(--mono);color:var(--ink);font-weight:500}
+.dot{margin:0 7px;color:var(--rule)}
+
+.tabs-top{display:flex;gap:4px;margin-top:16px}
+.toptab{background:transparent;border:1px solid transparent;border-bottom:none;border-radius:3px 3px 0 0;
+  padding:10px 20px;cursor:pointer;font-weight:700;text-transform:uppercase;letter-spacing:.14em;
+  font-size:13px;color:var(--muted)}
+.toptab:hover{color:var(--ink)}
+.toptab[aria-selected="true"]{background:var(--panel);border-color:var(--rule);color:var(--brass)}
+.tabs-sub{display:flex;gap:2px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+  background:var(--panel);padding:0 6px;flex-wrap:wrap}
+.subtab{background:transparent;border:none;border-bottom:2px solid transparent;padding:9px 14px;
+  cursor:pointer;font-weight:600;text-transform:uppercase;letter-spacing:.1em;font-size:11px;color:var(--muted)}
+.subtab:hover{color:var(--ink)}
+.subtab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--brass)}
+.subtab .count{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:6px}
+.subtab .count.bad{color:var(--port)}
+.view{padding-top:18px}
+.topview{border-top:1px solid var(--rule)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.spacer{flex:1}
+.btn{background:var(--panel);border:1px solid var(--rule);border-radius:2px;padding:7px 12px;cursor:pointer;
+  font-weight:600;text-transform:uppercase;letter-spacing:.09em;font-size:11px;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--panel-2);border-color:var(--edge)}
+.btn-primary{background:var(--brass);border-color:var(--brass);color:var(--on-accent)}
+.btn-primary:hover{background:var(--accent-hi);border-color:var(--accent-hi)}
+.btn-quiet{background:transparent;color:var(--muted)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary:disabled:hover{background:var(--brass);border-color:var(--brass)}
+.check{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer}
+.check input{accent-color:var(--brass)}
+#status{margin:10px 0;font-size:13px;color:var(--stbd);min-height:18px;text-align:center}
+#status.bad{color:var(--port)}
+.viewhead{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.viewhead h2{text-transform:uppercase;letter-spacing:.16em;font-size:14px;font-weight:700}
+
+/* Upload */
+.uploadzone{display:flex;flex-direction:column;align-items:center;gap:10px;padding:46px 16px 34px;
+  border:1px dashed transparent;border-radius:3px;transition:border-color .15s,background .15s}
+.uploadzone.over{border-color:var(--brass);background:var(--active-tint)}
+.uploadzone.loaded{padding:22px 16px 10px}
+.btn-upload{background:var(--brass);border:1px solid var(--brass);color:var(--on-accent);border-radius:999px;
+  padding:14px 36px;cursor:pointer;font-weight:700;text-transform:uppercase;letter-spacing:.16em;font-size:13px;
+  box-shadow:0 6px 18px rgba(0,0,0,.25);transition:background .15s,transform .1s}
+.btn-upload:hover{background:var(--accent-hi);border-color:var(--accent-hi)}
+.btn-upload:active{transform:translateY(1px)}
+.uploadzone .tiny{text-align:center;margin:0}
+
+/* Cards, text */
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:16px;margin-bottom:18px}
+.card input[type=number]{background:var(--deck);border:1px solid var(--rule);border-radius:2px;padding:6px 8px;font-size:13px}
+.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.section-head h2{text-transform:uppercase;letter-spacing:.14em;font-size:13px;font-weight:700;color:var(--brass)}
+.dayrow{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:3px}
+.field span{text-transform:uppercase;letter-spacing:.14em;font-size:10px;font-weight:600;color:var(--muted)}
+.field input{background:var(--deck);border:1px solid var(--rule);border-radius:2px;padding:6px 8px;
+  font-family:var(--mono);font-size:13px;width:120px}
+.field input:hover{border-color:var(--brass)}
+.field input.invalid{border-color:var(--port)}
+.hint{flex:1;min-width:230px;font-size:12px;color:var(--muted);line-height:1.5}
+.tiny{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.55}
+.empty{font-size:13px;color:var(--muted)}
+.emptybig{text-align:center;padding:56px 16px;font-size:15px;color:var(--muted)}
+.breach{background:var(--breach-bg);border:1px solid var(--port);border-left:3px solid var(--port);
+  border-radius:3px;padding:11px 15px;margin-bottom:14px;font-size:12px;line-height:1.5}
+.notice{background:var(--nopool-bg);border:1px solid var(--warn);border-left:3px solid var(--warn);
+  border-radius:3px;padding:11px 15px;margin-bottom:14px;font-size:12px;color:var(--ink);line-height:1.5}
+
+/* Readout blocks */
+.readout{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:18px}
+.rblock{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:13px 15px;min-width:170px}
+.readout h3{text-transform:uppercase;letter-spacing:.16em;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:8px}
+.stat{font-size:13px;color:var(--muted)}
+.stat strong{font-family:var(--mono);font-size:17px;color:var(--ink);margin-right:5px}
+.stat.bad strong{color:var(--port)}
+.stat.good strong{color:var(--stbd)}
+
+/* Tables */
+.tablewrap{overflow:auto;border:1px solid var(--rule);border-radius:3px}
+table{border-collapse:collapse;width:100%}
+.matrixwrap{overflow:auto;border:1px solid var(--rule);border-radius:3px;max-height:70vh}
+.matrix{border-collapse:separate;border-spacing:0}
+.matrix th,.matrix td{border-right:1px solid var(--rule-soft);border-bottom:1px solid var(--rule-soft)}
+.matrix thead th{background:var(--panel-2);vertical-align:bottom;padding:8px 8px;font-weight:600;
+  position:sticky;top:0;z-index:4;text-align:left;text-transform:uppercase;letter-spacing:.12em;font-size:10px;color:var(--muted)}
+.matrix tbody td{background:var(--deck);padding:6px 8px;font-size:13px}
+.matrix tbody tr:hover td{background:var(--panel)}
+.matrix tbody tr.off td{opacity:.55}
+.matrix input[type=checkbox]{width:16px;height:16px;accent-color:var(--brass);cursor:pointer;vertical-align:middle}
+.matrix .c{text-align:center}
+.matrix .mono{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.matrix th .hctl{display:flex;flex-direction:column;gap:5px;align-items:center}
+.qsum{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px}
+.pick{background:var(--panel);border:1px solid var(--rule);border-radius:2px;padding:3px 5px;
+  font-size:12px;cursor:pointer;color:var(--muted);width:130px}
+.pick:hover{border-color:var(--edge)}
+.pick.set{color:var(--ink);border-color:var(--brass)}
+.pick option{background:var(--panel);color:var(--ink)}
+th .pick{width:120px;text-transform:none;letter-spacing:0;font-weight:500}
+
+.rtable th{text-align:left;text-transform:uppercase;letter-spacing:.14em;font-size:10px;font-weight:600;
+  color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--rule);background:var(--panel-2);
+  position:sticky;top:0;white-space:nowrap}
+.rtable td{padding:5px 8px;font-size:12px;border-bottom:1px solid var(--rule-soft);white-space:nowrap}
+.rtable td.num,.rtable th.num{text-align:right;font-family:var(--mono)}
+.rtable td.up{color:var(--stbd)}
+.rtable td.down{color:var(--port)}
+.rtable td.flag{color:var(--port);font-weight:600}
+.rtable td.bool{text-align:center}
+.rtable td.bool.false{color:var(--muted)}
+.rtable td.unparsed{background:var(--nopool-bg);color:var(--warn)}
+.datawrap{max-height:70vh}
+
+/* Results: one expandable block per command */
+.cmd{background:var(--panel);border:1px solid var(--rule);border-radius:3px;margin-bottom:8px}
+.cmd.has{border-left:3px solid var(--port)}
+.cmd.clear{border-left:3px solid var(--stbd)}
+.cmd > summary{cursor:pointer;list-style:none;padding:11px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cmd > summary::-webkit-details-marker{display:none}
+.cmd > summary::before{content:"\25B8";display:inline-block;width:12px;color:var(--brass)}
+.cmd[open] > summary::before{content:"\25BE"}
+.cmd .nm{font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:13px}
+.cmd .uic{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.cmd .tags{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.tag{border:1px solid var(--rule);border-radius:2px;padding:2px 8px;font-size:10px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.tag b{font-family:var(--mono);font-weight:500;margin-left:5px;color:var(--ink)}
+.tag.hit{border-color:var(--port);color:var(--conflict-ink);background:var(--conflict-bg)}
+.tag.hit b{color:var(--conflict-ink)}
+.tag.ign{text-decoration:line-through;opacity:.6}
+.cmdbody{padding:4px 14px 14px;border-top:1px solid var(--rule-soft)}
+.sub{margin-top:14px}
+.subhead{display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+.subhead h4{text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:700;color:var(--brass)}
+.subhead .n{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.subhead .n.bad{color:var(--port)}
+.sub.ignored .tablewrap{opacity:.45}
+.sub .tablewrap{max-height:340px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Step-by-step flow */
+.stepper{list-style:none;display:flex;flex-wrap:wrap;gap:6px;padding:14px 0 4px;margin:0}
+.stepper li{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.12em;color:var(--muted)}
+.stepper li + li::before{content:"";display:inline-block;width:26px;height:1px;background:var(--rule);margin-right:4px}
+.stepper button{display:flex;align-items:center;gap:8px;background:transparent;border:none;padding:4px 2px;
+  font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:default}
+.stepper button:not(:disabled){cursor:pointer}
+.stepper button:not(:disabled):hover{color:var(--ink)}
+.stepper .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;
+  border:1px solid var(--rule);font-family:var(--mono);font-size:11px;letter-spacing:0}
+.stepper li.done{color:var(--ink)}
+.stepper li.done .num{border-color:var(--stbd);color:var(--stbd)}
+.stepper li.current{color:var(--brass)}
+.stepper li.current .num{background:var(--brass);border-color:var(--brass);color:var(--on-accent)}
+.stepview{padding-top:10px}
+.stepnav{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:4px}
+.stepnav .tiny{margin:0}
+
+/* Scrollable checkbox lists */
+.picklist{max-height:56vh;overflow-y:auto;border:1px solid var(--rule);border-radius:3px;background:var(--deck)}
+.pickrow{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule-soft);cursor:pointer}
+.pickrow:last-child{border-bottom:none}
+.pickrow:hover{background:var(--panel-2)}
+.pickrow input{width:16px;height:16px;accent-color:var(--brass);flex:none;cursor:pointer}
+.pickrow .nm{font-size:14px;font-weight:500}
+.pickrow .desc{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.pickrow .meta{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.pickrow:has(input:checked){background:var(--active-tint)}
+.pick.unset{border-color:var(--warn);color:var(--warn)}
+
+/* Centered content column: two-thirds width on wide screens, full width when narrow */
+.page{width:66.667%;margin-inline:auto}
+
+/* Comparison */
+.cmpslots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:22px}
+.cmpslot{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;
+  border-style:dashed;transition:border-color .15s,background .15s}
+.cmpslot .section-head{width:100%;justify-content:center}
+.cmpslot.over{border-color:var(--brass);background:var(--active-tint)}
+.cmpslot.loaded{border-style:solid}
+.cmpslot .btn-upload{padding:11px 26px;font-size:12px}
+
+/* Command hierarchy */
+.quickpick{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.pickrow .under{font-size:11px;color:var(--muted);margin-left:6px}
+.pickrow.child .nm::before,.regrow.child .nm::before{content:"\21B3  ";color:var(--muted)}
+@media (max-width:1100px){.page{width:100%}}
+
+/* Command Editor */
+.splitgrid{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.splitgrid .wide{flex:2 1 460px;min-width:0}
+.splitgrid .narrow{flex:1 1 260px;min-width:0}
+.filterbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.filterbar input,.addrow input,.addrow select,.card textarea,.card input[type=text],.card input[type=month]{
+  background:var(--deck);border:1px solid var(--rule);border-radius:2px;padding:6px 9px;font-size:13px}
+.filterbar input{width:240px}
+.addrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-top:1px solid var(--rule-soft);padding-top:12px;margin-top:12px}
+.datepick{cursor:pointer}
+/* Entitlement log entry form: Item / Should be / From / To, then Note + button */
+.logadd{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end;
+  border-top:1px solid var(--rule-soft);padding-top:12px;margin-top:12px}
+.logadd .field input,.logadd .field select{width:100%;background:var(--deck);border:1px solid var(--rule);
+  border-radius:2px;padding:6px 9px;font-size:13px;font-family:var(--sans);color:var(--ink)}
+.logadd .field.note{grid-column:1 / 4}
+@media (max-width:640px){.logadd{grid-template-columns:1fr 1fr}.logadd .field.note{grid-column:1 / -1}}
+.reglist{max-height:52vh}
+.regrow{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;background:transparent;border:none;
+  border-bottom:1px solid var(--rule-soft);padding:9px 12px;cursor:pointer}
+.regrow:last-child{border-bottom:none}
+.regrow:hover{background:var(--panel-2)}
+.regrow[aria-current="true"]{background:var(--active-tint);box-shadow:inset 3px 0 0 var(--brass)}
+.regrow .nm{font-size:13px;font-weight:600}
+.regrow .meta{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.fieldgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:12px}
+.fieldgrid .field input,.fieldgrid .field textarea{width:100%;font-family:var(--sans)}
+.card textarea{width:100%;min-height:60px;resize:vertical;font-family:var(--sans);color:var(--ink)}
+.facts{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--muted)}
+.facts b{font-family:var(--mono);font-weight:500;color:var(--ink)}
+.logtable{width:100%;border-collapse:collapse}
+.logtable th{text-align:left;text-transform:uppercase;letter-spacing:.14em;font-size:10px;font-weight:600;
+  color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--rule)}
+.logtable td{padding:6px 8px;font-size:12px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+.logtable td.when{font-family:var(--mono);white-space:nowrap}
+.logtable td.yes{color:var(--stbd)}
+.logtable td.no{color:var(--port)}
+.logtable tr.overlap td{background:var(--nopool-bg)}
+.logtable td.act{text-align:right;width:34px}
+.rowdel{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:12px;line-height:1;padding:2px 4px}
+.rowdel:hover{color:var(--port)}
+.btn-danger:hover{border-color:var(--port);color:var(--port)}
+.btn-danger.armed{border-color:var(--port);background:var(--conflict-bg);color:var(--conflict-ink)}
+</style>
+</head>
+<body>
+
+<div class="decor" aria-hidden="true"><span class="d1"></span><span class="d2"></span>
+  <span class="d3"></span><span class="d4"></span></div>
+
+<header class="mast">
+  <div>
+    <p class="eyebrow">Pay Audit</p>
+    <h1 id="appTitle">eUCFR Viewer</h1>
+    <p class="dayline" id="dayline">No eUCFR loaded</p>
+  </div>
+</header>
+
+<nav class="tabs-top" role="tablist">
+  <button class="toptab" role="tab" data-top="single" aria-selected="true">Single Audit</button>
+  <button class="toptab" role="tab" data-top="compare" aria-selected="false">Comparison</button>
+  <button class="toptab" role="tab" data-top="editor" aria-selected="false">Command Editor</button>
+  <button class="toptab gear" role="tab" data-top="settings" aria-selected="false"
+          title="App settings" aria-label="App settings">&#9881;</button>
+</nav>
+
+<!-- ============================ SINGLE AUDIT =========================== -->
+<section class="topview" id="top-single">
+ <div class="page">
+  <ol class="stepper" id="stepper" aria-label="Audit steps"></ol>
+  <p id="status"></p>
+
+  <!-- 1. UPLOAD -->
+  <section class="stepview" id="step-upload">
+    <div class="uploadzone" id="uploadZone">
+      <button class="btn-upload" id="btn-upload" type="button">Upload eUCFR</button>
+      <input type="file" id="file" accept=".csv,text/csv" hidden />
+      <p class="tiny">Choose or drag in an eUCFR .csv file.</p>
+    </div>
+  </section>
+
+  <!-- 2. COMMANDS -->
+  <section class="stepview" id="step-commands" hidden>
+    <div class="card">
+      <div class="section-head">
+        <h2>Which commands do you want to audit?</h2>
+        <label class="check"><input type="checkbox" id="cmdAll" /> Select all</label>
+      </div>
+      <div class="quickpick" id="quickPick" hidden>
+        <span class="tiny" style="margin:0">Audit a command and all of its units:</span>
+        <select class="pick" id="parentPick" style="width:280px" aria-label="Select a command and its units"></select>
+      </div>
+      <div class="picklist" id="cmdList"></div>
+      <p class="tiny" id="cmdCount"></p>
+    </div>
+    <div class="stepnav">
+      <button class="btn" data-go="upload">Back</button>
+      <span class="spacer"></span>
+      <span class="tiny" id="cmdHint"></span>
+      <button class="btn btn-primary" id="next-commands">Next</button>
+    </div>
+  </section>
+
+  <!-- 3. AUDITS -->
+  <section class="stepview" id="step-audits" hidden>
+    <div class="card">
+      <div class="section-head">
+        <h2>What do you want to audit?</h2>
+        <label class="check"><input type="checkbox" id="auditAll" /> Select all</label>
+      </div>
+      <div class="picklist" id="auditList"></div>
+    </div>
+    <div class="stepnav">
+      <button class="btn" data-go="commands">Back</button>
+      <span class="spacer"></span>
+      <span class="tiny" id="auditHint"></span>
+      <button class="btn btn-primary" id="next-audits">Next</button>
+    </div>
+  </section>
+
+  <!-- 4. SETTINGS -->
+  <section class="stepview" id="step-settings" hidden>
+    <div class="card" id="entCard">
+      <div class="section-head"><h2>Command Entitlements&hellip;</h2></div>
+      <p class="tiny" style="margin:0 0 10px">Current settings, saved from the last time they were set. Check the box if the command should be entitled to the pay.</p>
+      <div id="entTable"></div>
+      <p class="tiny" id="mealNote">Meal Deductions: Officers always expected to have none</p>
+    </div>
+    <div class="card" id="payShiftCard">
+      <div class="section-head"><h2>Pay shift threshold</h2></div>
+      <div class="dayrow">
+        <label class="field"><span>Flag changes over (&plusmn; %)</span>
+          <input type="number" id="payShiftThreshold" min="0" step="0.1" inputmode="decimal" /></label>
+        <p class="hint">Flags sailors whose net pay changed from last month by more than this percentage, up or down.</p>
+      </div>
+    </div>
+    <div class="stepnav">
+      <button class="btn" data-go="audits">Back</button>
+      <span class="spacer"></span>
+      <span class="tiny" id="settingsHint"></span>
+      <button class="btn btn-primary" id="run-settings">Run audit</button>
+    </div>
+  </section>
+
+  <!-- 5. REVIEW RESULTS -->
+  <section class="stepview" id="step-results" hidden>
+    <div id="resultsBody"></div>
+    <div class="stepnav" style="margin-top:14px">
+      <button class="btn" id="results-back">Back</button>
+      <span class="spacer"></span>
+      <button class="btn btn-primary" data-go="report">Next</button>
+    </div>
+  </section>
+
+  <!-- 6. REPORTING -->
+  <section class="stepview" id="step-report" hidden>
+    <div id="reportReadout"></div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Commands in this report</h2>
+        <label class="check"><input type="checkbox" id="repAll" /> Select all</label>
+      </div>
+      <div class="picklist" id="repList" style="max-height:34vh"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Email report</h2>
+        <span class="spacer"></span>
+        <button class="btn" id="rep-regen" title="Rebuild the text from the audit results, discarding edits">Regenerate</button>
+        <button class="btn" id="rep-copy">Copy report</button>
+        <button class="btn btn-primary" id="rep-email">Open in email</button>
+      </div>
+      <label class="field" style="margin-bottom:10px"><span>Subject</span>
+        <input type="text" id="repSubject" style="width:100%;font-family:var(--sans)" /></label>
+      <label class="field"><span>Body</span>
+        <textarea id="repBody" spellcheck="false" style="min-height:340px;font-family:var(--mono);font-size:12px;line-height:1.55"></textarea></label>
+      <p class="tiny" id="repHint">You can edit the text before sending. Changing the commands above rebuilds it.</p>
+    </div>
+
+    <div class="stepnav">
+      <button class="btn" data-go="results">Back</button>
+      <span class="spacer"></span>
+      <button class="btn" data-go="commands">Start a new audit</button>
+      <button class="btn" data-go="upload">Upload a different eUCFR</button>
+    </div>
+  </section>
+ </div>
+</section>
+
+<!-- ============================= COMPARISON ============================ -->
+<section class="topview view" id="top-compare" hidden>
+ <div class="page">
+  <div class="cmpslots">
+    <div class="card cmpslot" data-slot="0">
+      <div class="section-head"><h2>Older eUCFR</h2></div>
+      <button class="btn-upload" type="button" data-pick="0">Upload older eUCFR</button>
+      <input type="file" id="cmpFile0" accept=".csv,text/csv" hidden />
+      <p class="dayline" id="cmpInfo0">Not loaded</p>
+    </div>
+    <div class="card cmpslot" data-slot="1">
+      <div class="section-head"><h2>Newer eUCFR</h2></div>
+      <button class="btn-upload" type="button" data-pick="1">Upload newer eUCFR</button>
+      <input type="file" id="cmpFile1" accept=".csv,text/csv" hidden />
+      <p class="dayline" id="cmpInfo1">Not loaded</p>
+    </div>
+  </div>
+  <p class="tiny" id="cmpStatus" style="text-align:center;margin:0 0 14px">Upload two eUCFRs (or drag them onto the boxes) to see what changed between them.</p>
+
+  <div class="card" id="cmpOptions" hidden>
+    <div class="dayrow">
+      <label class="field"><span>Commands</span><select id="cmpScope" class="pick" style="width:280px"></select></label>
+      <label class="field"><span>Pay changes over (&plusmn; %)</span>
+        <input type="number" id="cmpThreshold" min="0" step="0.1" inputmode="decimal" /></label>
+      <p class="hint">Sailors are matched between the two files by name; a name that appears more than once is matched by UIC, then grade.</p>
+    </div>
+  </div>
+  <div id="cmpBody"></div>
+ </div>
+</section>
+
+<!-- ============================== SETTINGS ============================= -->
+<section class="topview view" id="top-settings" hidden>
+ <div class="page">
+  <div class="card">
+    <div class="section-head"><h2>Theme</h2></div>
+    <div class="themerow" id="themeRow"></div>
+    <p class="tiny">Saved in this browser.</p>
+  </div>
+ </div>
+</section>
+
+<!-- =========================== COMMAND EDITOR ========================== -->
+<section class="topview view" id="top-editor" hidden>
+ <div class="page">
+  <div class="filterbar">
+    <input id="regFilter" placeholder="Filter by UIC or name" aria-label="Filter commands" />
+    <span class="tiny" style="margin:0" id="regCount"></span>
+    <span class="spacer"></span>
+    <button class="btn" id="reg-export">Export</button>
+    <button class="btn" id="reg-import">Import</button>
+    <input type="file" id="regImportFile" accept=".json,application/json" hidden />
+  </div>
+  <p class="tiny" id="regStatus" style="margin:0 0 10px"></p>
+
+  <div class="splitgrid">
+    <div class="narrow">
+      <div class="card">
+        <div class="section-head"><h2>Commands</h2></div>
+        <div class="picklist reglist" id="regList"></div>
+        <div class="addrow">
+          <input type="text" id="newUic" placeholder="UIC" maxlength="6" style="width:80px" aria-label="New command UIC" />
+          <input type="text" id="newName" placeholder="Command name" style="flex:1;min-width:120px" aria-label="New command name" />
+          <button class="btn btn-primary" id="reg-add">Add</button>
+        </div>
+        <p class="tiny">Every command in an uploaded eUCFR is added here automatically. Indexed by UIC</p>
+      </div>
+    </div>
+    <div class="wide" id="regDetail"></div>
+  </div>
+ </div>
+</section>
+
+<script>
+/* ===== NORMALIZATION CONFIG ===== */
+
+// Columns removed entirely (matched case-insensitively, ignoring extra spaces).
+const DROP_COLUMNS = [
+  'INITIAL', 'MIDDLE INITIAL', 'SSAN',
+  'TSC', 'RSC', 'BSO NAME', 'UIC COUNTRY', 'UIC CITY',
+  'FSSA', 'BNA', 'FSA', 'FSA AGE CATEGORY', 'CONUS INDICATOR',
+  // Always "-" in observed exports
+  'SPCL COMP IND', 'OHA', 'ADV OHA SUSPENDED',
+  'FAM SEP HOUSING - BAH', 'FAM SEP HOUSING - OHA', 'SPEC INCTV PAY 6',
+  'UIC ZIP', 'UIC STATE',
+  'SGLI', 'FSGLI',
+  // Replaced by a calculated column (see CALCULATED_COLUMNS)
+  'NET PAY % CHG',
+];
+
+// Rows whose STATUS matches one of these (case-insensitive) are removed.
+const EXCLUDE_STATUSES = ['Separated', 'Suspended', 'Confinement'];
+
+// LAST NAME + FIRST NAME are merged into this column, placed where LAST NAME was.
+const NAME_COLUMN = 'NAME';
+
+// Value types. Every cell is stored as one of: null (blank), number, boolean,
+// or text. "-", "" and whitespace-only cells are all treated as blank.
+//   money   -> number in dollars        (shown 9,995.50)
+//   percent -> number in percent units  (0.07 means 0.07%; shown 0.07%)
+//   number  -> plain number
+//   month   -> ISO 8601 YYYY-MM text
+//   day     -> ISO 8601 YYYY-MM-DD text
+const COLUMN_TYPES = {
+  'PAY MONTH': 'month',
+  'EAOS': 'day',
+  'NET PAY PRIOR MONTH': 'money',
+  'NET PAY CURRENT MONTH': 'money',
+  'GROSS MONTHLY INCOME (GMI)': 'money',
+  'ALLOTS': 'money',
+  'DEBT BAL DUE': 'money',
+  'NET PAY DEVIATION': 'percent',
+  'YRS OF SVC': 'number',
+  'LV BALANCE': 'number',
+  'SPEC LV BALANCE': 'number',
+};
+
+// Columns whose text packs one or more values into one cell. `parse` gets the
+// trimmed, non-blank text and returns one value per output, or undefined if
+// the text isn't in a recognized form (the raw text is then kept and flagged).
+const SPLIT_COLUMNS = {
+  'COMMAND': {
+    outputs: [['UIC', 'text'], ['COMMAND', 'text']],
+    parse: t => { const m = t.match(/^([0-9A-Z]{5})\s*-\s*(.+)$/i); return m && [m[1].toUpperCase(), m[2].trim()]; },
+  },
+  'PRIVATIZED HOUSING': {           // "Yes-$1,161" -> 1161
+    outputs: [['PRIVATIZED HOUSING', 'money']],
+    parse: t => { const m = t.match(/^Yes\s*-\s*\$?\s*([\d,]+(?:\.\d+)?)$/i); return m && [parseNumber(m[1])]; },
+  },
+  'GTC DELINQ DAYS & AMT': {        // "50 - $1104.66" -> 50, 1104.66
+    outputs: [['GTC DELINQ DAYS', 'number'], ['GTC DELINQ AMT', 'money']],
+    parse: t => { const m = t.match(/^(\d+)\s*-\s*\$?\s*(-?[\d,]+(?:\.\d+)?)$/); return m && [Number(m[1]), parseNumber(m[2])]; },
+  },
+  'SEA DUTY COUNTER': {             // "2 Years 3 Months 4 Days" -> kept, plus total months
+    outputs: [['SEA DUTY COUNTER', 'text'], ['SEA DUTY (MONTHS)', 'number']],
+    parse: t => {
+      const m = t.match(/^(\d+)\s+Years?\s+(\d+)\s+Months?\s+(\d+)\s+Days?$/i);
+      return m && [t, round(+m[1] * 12 + +m[2] + +m[3] / DAYS_PER_MONTH, 2)];
+    },
+  },
+  'ZIP': {                          // Excel strips leading zeros: 3804 -> 03804
+    outputs: [['ZIP', 'text']],
+    parse: t => /^\d{3,5}$/.test(t) ? [t.padStart(5, '0')] : /^\d{5}-\d{4}$/.test(t) ? [t] : undefined,
+  },
+};
+const DAYS_PER_MONTH = 365.25 / 12;
+
+// Special incentive pays arrive in positional columns (SPEC INCTV PAY 1..6) with
+// no fixed slot per type. They're replaced by one boolean column per pay type,
+// inserted where the SPEC INCTV PAY summary column was. Types found in a file
+// but not listed here still get a column (appended) and are reported.
+const PAY_TYPES = {
+  summary: 'SPEC INCTV PAY',
+  sources: ['SPEC INCTV PAY 1', 'SPEC INCTV PAY 2', 'SPEC INCTV PAY 3',
+            'SPEC INCTV PAY 4', 'SPEC INCTV PAY 5', 'SPEC INCTV PAY 6'],
+  known: ['Submarine', 'Career Sea', 'Career Sea - P', 'SDAP', 'Diving',
+          'Command at Sea', 'HFP/IDP', 'HDIP', 'Demo Duty'],
+};
+
+// Columns computed by the tool. Each is inserted where `at` sits in the source
+// file; `inputs` are source columns whose raw text is passed (in order) to `calc`.
+const CALCULATED_COLUMNS = [
+  {
+    name: 'NET PAY % CHG (CALC)',
+    type: 'percent',
+    at: 'NET PAY % CHG',
+    inputs: ['NET PAY PRIOR MONTH', 'NET PAY CURRENT MONTH'],
+    calc: (prior, current) => round(percentChange(parseNumber(prior), parseNumber(current))),
+  },
+];
+
+/* ===== CSV PARSING ===== */
+
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); rows.push(row); row = []; field = '';
+    } else field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim() !== ''));
+}
+
+/* ===== VALUE PARSING & CALCULATIONS ===== */
+
+// "-", "", "   " -> null; otherwise trimmed text.
+function blank(value) {
+  const t = String(value ?? '').trim();
+  return t === '' || t === '-' ? null : t;
+}
+
+// Rounds away float noise (0.0007 * 100 = 0.06999999...). Passes null through.
+const round = (n, dp = 6) => n == null ? n : Math.round(n * 10 ** dp) / 10 ** dp;
+
+// "9,995.50", "9995.5", "$1,161", "-1.30%" -> number; blank -> null;
+// anything else -> undefined (unrecognized).
+function parseNumber(value) {
+  const t = blank(value);
+  if (t === null) return null;
+  const n = Number(t.replace(/[$,%\s]/g, ''));
+  return Number.isFinite(n) ? n : undefined;
+}
+
+// Percent in either export style -> percent units. "0.10%" -> 0.1, "0.0007" -> 0.07.
+function parsePercent(value) {
+  const t = blank(value);
+  if (t === null) return null;
+  const n = parseNumber(t);
+  if (n == null) return n;
+  return round(t.includes('%') ? n : n * 100);
+}
+
+// Percent change from prior to current, in percent units. Null when it can't
+// be computed (missing value, or prior is 0 so the change is undefined).
+function percentChange(prior, current) {
+  if (prior == null || current == null || prior === 0) return null;
+  return (current - prior) / Math.abs(prior) * 100;
+}
+
+const MONTHS = { JAN:1, FEB:2, MAR:3, APR:4, MAY:5, JUN:6, JUL:7, AUG:8, SEP:9, OCT:10, NOV:11, DEC:12 };
+const pad = n => String(n).padStart(2, '0');
+const fullYear = y => y < 100 ? 2000 + y : y; // 2-digit years are 20YY
+
+// Accepts the forms seen in EUCFR exports: Excel serial (45809), M/D/YY(YY),
+// Mon-YY(YY), and existing ISO. Returns ISO text, or undefined if unrecognized.
+function toISODate(value, precision) {
+  const v = String(value).trim();
+  let y, m, d = 1, m2;
+  if (/^\d{5}(\.\d+)?$/.test(v)) {
+    // Excel serial date: days since 1899-12-30
+    const dt = new Date(Date.UTC(1899, 11, 30) + Math.floor(Number(v)) * 86400000);
+    y = dt.getUTCFullYear(); m = dt.getUTCMonth() + 1; d = dt.getUTCDate();
+  } else if ((m2 = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/))) {
+    m = +m2[1]; d = +m2[2]; y = fullYear(+m2[3]);
+  } else if ((m2 = v.match(/^([A-Za-z]{3})[-\s](\d{2}|\d{4})$/)) && MONTHS[m2[1].toUpperCase()]) {
+    m = MONTHS[m2[1].toUpperCase()]; y = fullYear(+m2[2]);
+  } else if ((m2 = v.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/))) {
+    y = +m2[1]; m = +m2[2]; d = m2[3] ? +m2[3] : 1;
+  } else {
+    return undefined;
+  }
+  return precision === 'month' ? `${y}-${pad(m)}` : `${y}-${pad(m)}-${pad(d)}`;
+}
+
+// Single-value parsers by type. Return the value, null for blank, or undefined
+// if the text isn't recognized.
+const PARSERS = {
+  text:    t => t,
+  money:   t => round(parseNumber(t)),
+  number:  t => round(parseNumber(t)),
+  percent: t => parsePercent(t),
+  month:   t => toISODate(t, 'month'),
+  day:     t => toISODate(t, 'day'),
+};
+
+/* ===== NORMALIZATION ===== */
+
+const key = h => h.trim().replace(/\s+/g, ' ').toUpperCase();
+
+// Turns raw CSV rows into { columns: [{name, type}], rows: [[value...]], ... }.
+// The output is built from "segments": each produces one or more adjacent
+// columns from a source row.
+function normalize(rawRows) {
+  const [header, ...data] = rawRows;
+  const keys = header.map(key);
+  const idx = name => keys.indexOf(key(name));
+  const drop = new Set(DROP_COLUMNS.map(key));
+  const types = Object.fromEntries(Object.entries(COLUMN_TYPES).map(([k, t]) => [key(k), t]));
+  const splits = Object.fromEntries(Object.entries(SPLIT_COLUMNS).map(([k, s]) => [key(k), s]));
+  const lastIdx = idx('LAST NAME');
+  const firstIdx = idx('FIRST NAME');
+
+  // Row filter by status
+  const statusIdx = idx('STATUS');
+  const excluded = new Set(EXCLUDE_STATUSES.map(key));
+  const kept = data.filter(r => !excluded.has(key(r[statusIdx] || '')));
+
+  // Values that couldn't be parsed: column -> { count, examples:Set }
+  const unparsed = {};
+  const flag = (col, raw) => {
+    const u = unparsed[col] ??= { count: 0, examples: new Set() };
+    u.count++;
+    if (u.examples.size < 3) u.examples.add(raw);
+  };
+
+  // Pay types: collect each sailor's set, and any types not in the known list.
+  const paySourceIdx = PAY_TYPES.sources.map(idx).filter(i => i >= 0);
+  const payInsertIdx = idx(PAY_TYPES.summary) >= 0 ? idx(PAY_TYPES.summary) : paySourceIdx[0];
+  const payDrop = new Set([key(PAY_TYPES.summary), ...PAY_TYPES.sources.map(key)]);
+  const payTypes = new Map(PAY_TYPES.known.map(t => [key(t), t])); // key -> display name
+  const newPayTypes = [];
+  const sailorPays = new Map(); // row -> Set of type keys
+  for (const r of kept) {
+    const set = new Set();
+    for (const i of paySourceIdx) {
+      const v = blank(r[i]);
+      if (v === null) continue;
+      set.add(key(v));
+      if (!payTypes.has(key(v))) { payTypes.set(key(v), v); newPayTypes.push(v); }
+    }
+    sailorPays.set(r, set);
+  }
+
+  const segments = []; // { outputs: [{name, type}], compute: row -> [values] }
+  const single = (name, type, compute) => segments.push({ outputs: [{ name, type }], compute: r => [compute(r)] });
+
+  keys.forEach((k, i) => {
+    if (i === payInsertIdx) {
+      for (const [tk, name] of payTypes) single(name, 'bool', r => sailorPays.get(r).has(tk));
+    }
+    for (const c of CALCULATED_COLUMNS) {
+      if (key(c.at) === k) {
+        const inputIdx = c.inputs.map(idx);
+        single(c.name, c.type, r => c.calc(...inputIdx.map(j => j >= 0 ? r[j] ?? '' : '')));
+      }
+    }
+    const name = header[i].trim();
+
+    if (i === lastIdx) {
+      single(NAME_COLUMN, 'text', r => {
+        const last = blank(r[lastIdx]) ?? '';
+        const first = firstIdx >= 0 ? blank(r[firstIdx]) ?? '' : '';
+        return first ? `${last}, ${first}` : last;
+      });
+    } else if (i === firstIdx || drop.has(k) || payDrop.has(k)) {
+      // dropped (FIRST NAME is folded into NAME; pay columns become booleans)
+    } else if (splits[k]) {
+      const s = splits[k];
+      const outputs = s.outputs.map(([n, t]) => ({ name: n, type: t }));
+      segments.push({ outputs, compute: r => {
+        const t = blank(r[i]);
+        if (t === null) return outputs.map(() => null);
+        const vals = s.parse(t);
+        if (vals) return vals;
+        flag(name, t);
+        return outputs.map((_, j) => j === 0 ? t : null);
+      }});
+    } else {
+      const type = types[k] || 'text';
+      single(name, type, r => {
+        const t = blank(r[i]);
+        if (t === null) return null;
+        const v = PARSERS[type](t);
+        if (v === undefined) { flag(name, t); return t; }
+        return v;
+      });
+    }
+  });
+
+  return {
+    columns: segments.flatMap(s => s.outputs),
+    rows: kept.map(r => segments.flatMap(s => s.compute(r))),
+    excludedCount: data.length - kept.length,
+    newPayTypes,
+    unparsed,
+    dropped: header.filter((h, i) => i === firstIdx || i === lastIdx || drop.has(keys[i]) || payDrop.has(keys[i])).map(h => h.trim()),
+  };
+}
+
+/* ===== RENDERING HELPERS ===== */
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const NUMERIC_TYPES = new Set(['money', 'percent', 'number']);
+const money = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const $ = id => document.getElementById(id);
+
+// Formats one table cell by column type. `extra` adds CSS classes.
+function cell(v, type, extra = '') {
+  const td = (cls, html, title = '') => {
+    const c = [cls, extra].filter(Boolean).join(' ');
+    return `<td${c ? ` class="${c}"` : ''}${title ? ` title="${title}"` : ''}>${html}</td>`;
+  };
+  if (v === null || v === undefined) return td('', '');
+  if (typeof v === 'boolean') return td(`bool ${v}`, v ? 'TRUE' : 'FALSE');
+  if (NUMERIC_TYPES.has(type) && typeof v !== 'number') return td('unparsed', esc(v), 'Could not read as a number');
+  if (type === 'money') return td('num', money.format(v));
+  if (type === 'percent') return td('num', `${v.toFixed(2)}%`);
+  if (type === 'number') return td('num', String(v));
+  return td('', esc(v));
+}
+
+// Table from column specs: [{ label, type?, value(row), cls?(row) }]
+function table(cols, rows) {
+  const head = '<tr>' + cols.map(c => `<th class="${NUMERIC_TYPES.has(c.type) ? 'num' : ''}">${esc(c.label)}</th>`).join('') + '</tr>';
+  const body = rows.map(r => '<tr>' + cols.map(c => cell(c.value(r), c.type || 'text', c.cls?.(r))).join('') + '</tr>').join('');
+  return `<div class="tablewrap"><table class="rtable"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+}
+
+/* ===== AUDIT DEFINITIONS ===== */
+
+// Leave use-or-lose rule.
+const LEAVE = { max: 90, accrualPerMonth: 2.5, monthsAhead: 3 };
+
+// Officers (O-grades and warrant officers) vs enlisted, from GRADE.
+const isOfficer = get => /^[OW]/i.test(get('GRADE') ?? '');
+
+// Audit types offered in step 3, in display order. Mismatch audits (`yes`/`no`
+// set) need each command set to what its sailors should have: `has(get)` reads
+// whether a sailor has it today, `appliesTo` limits which sailors are checked.
+const AUDIT_TYPES = [
+  { id: 'gtc', label: 'GTC Delinquencies',
+    desc: 'Sailors with a delinquent Government Travel Charge card, with the amount owed.' },
+  { id: 'sea', label: 'Sea Pay Mismatch', short: 'Sea Pay', yes: 'Entitled', no: 'Not entitled',
+    desc: 'Sailors whose Career Sea / Career Sea - P pay doesn\'t match their command.',
+    appliesTo: () => true, has: get => get('Career Sea') === true || get('Career Sea - P') === true,
+    describe: shouldHave => shouldHave ? 'Command is entitled, sailor is not receiving' : 'Command is not entitled, sailor is receiving' },
+  { id: 'sub', label: 'Sub Pay Mismatch', short: 'Sub Pay', yes: 'Entitled', no: 'Not entitled',
+    desc: 'Sailors whose Submarine pay doesn\'t match their command.',
+    appliesTo: () => true, has: get => get('Submarine') === true,
+    describe: shouldHave => shouldHave ? 'Command is entitled, sailor is not receiving' : 'Command is not entitled, sailor is receiving' },
+  { id: 'meal', label: 'Meal Deduction Mismatch', short: 'Meal Deductions', yes: 'Deductions', no: 'No deductions',
+    desc: 'Enlisted whose meal deductions don\'t match their command, and any officer with meal deductions.',
+    appliesTo: get => !isOfficer(get), has: get => get('MEAL DEDS') !== null,
+    describe: shouldHave => shouldHave ? 'Command has meal deductions, sailor does not' : 'Command has no meal deductions, sailor does' },
+  { id: 'leave', label: 'Upcoming Use-or-Lose',
+    desc: `Leave balance over ${LEAVE.max} days now or within the next ${LEAVE.monthsAhead} months (earning ${LEAVE.accrualPerMonth} days a month).` },
+  { id: 'payshift', label: 'Pay Shifts',
+    desc: 'Net pay that changed from last month by more than a percentage you set.' },
+];
+const isMismatch = a => 'yes' in a;
+const MISMATCH_AUDITS = AUDIT_TYPES.filter(isMismatch);
+const auditById = Object.fromEntries(AUDIT_TYPES.map(a => [a.id, a]));
+
+/* ===== PERSISTED SETTINGS ===== */
+
+const store = {
+  load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } },
+  save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ } },
+};
+
+// { [UIC]: bool } — missing means not yet seen, which counts as selected.
+let reviewCommands = store.load('eucfr.reviewCommands', {});
+// { [auditId]: bool }
+let selectedAudits = store.load('eucfr.selectedAudits', {});
+// { [UIC]: { sea|sub|meal: 'yes'|'no' } }
+let entitlements = store.load('eucfr.entitlements', {});
+// { payShiftThreshold: number }
+let auditSettings = store.load('eucfr.auditSettings', { payShiftThreshold: 7 });
+// { [payMonth]: { [uic]: { [auditId]: true } } }
+let auditIgnores = store.load('eucfr.auditIgnores', {});
+
+const isReviewed = uic => reviewCommands[uic] !== false;
+const isIgnored = (month, uic, id) => auditIgnores[month]?.[uic]?.[id] === true;
+const chosenAudits = () => AUDIT_TYPES.filter(a => selectedAudits[a.id] === true);
+
+/* ===== DATA HELPERS ===== */
+
+// Column reader for a result row: getter(row)(name) -> value or null.
+function rowGetter(result) {
+  const col = Object.fromEntries(result.columns.map((c, i) => [c.name, i]));
+  return r => name => name in col ? r[col[name]] : null;
+}
+
+// Unique commands with their rows and per-mismatch-audit "has it" counts.
+function commandsIn(result) {
+  const getter = rowGetter(result);
+  const zero = () => Object.fromEntries(MISMATCH_AUDITS.map(a => [a.id, 0]));
+  const byUic = new Map();
+  for (const r of result.rows) {
+    const get = getter(r);
+    const uic = get('UIC') ?? '(none)';
+    let c = byUic.get(uic);
+    if (!c) byUic.set(uic, c = { uic, name: get('COMMAND') ?? '', rows: [], applies: zero(), has: zero() });
+    c.rows.push(r);
+    for (const a of MISMATCH_AUDITS) {
+      if (!a.appliesTo(get)) continue;
+      c.applies[a.id]++;
+      if (a.has(get)) c.has[a.id]++;
+    }
+  }
+  return [...byUic.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// "2025-08" + 3 -> "2025-11"
+function addMonths(ym, n) {
+  const m = /^(\d{4})-(\d{2})/.exec(ym ?? '');
+  if (!m) return null;
+  const total = +m[1] * 12 + (+m[2] - 1) + n;
+  return `${Math.floor(total / 12)}-${pad(total % 12 + 1)}`;
+}
+
+/* ===== AUDIT LOGIC ===== */
+// Each function takes one command's rows and returns flagged sailors.
+
+const who = get => ({ name: get('NAME') ?? '', grade: get('GRADE') ?? '' });
+
+function auditMismatch(a, rows, getter, setting) {
+  const shouldHave = setting === 'yes';
+  const out = [];
+  for (const r of rows) {
+    const get = getter(r);
+    if (a.id === 'meal' && isOfficer(get)) {
+      if (get('MEAL DEDS') !== null) out.push({ ...who(get), issue: 'Officer has meal deductions' });
+      continue;
+    }
+    if (!a.appliesTo(get)) continue;
+    if (a.has(get) !== shouldHave) out.push({ ...who(get), issue: a.describe(shouldHave) });
+  }
+  return out.sort((x, y) => x.name.localeCompare(y.name));
+}
+
+function auditGTC(rows, getter) {
+  const out = [];
+  for (const r of rows) {
+    const get = getter(r);
+    const amount = get('GTC DELINQ AMT'), days = get('GTC DELINQ DAYS'), status = get('GTC DELINQ STATUS');
+    if (amount === null && days === null && status === null) continue;
+    out.push({ ...who(get), amount, days, status });
+  }
+  return out.sort((x, y) => (y.amount ?? 0) - (x.amount ?? 0));
+}
+
+// Flags sailors whose balance, accruing LEAVE.accrualPerMonth, exceeds
+// LEAVE.max at any month-end from the pay month through LEAVE.monthsAhead out.
+function auditLeave(rows, getter, payMonth) {
+  const out = [];
+  for (const r of rows) {
+    const get = getter(r);
+    const balance = get('LV BALANCE');
+    if (typeof balance !== 'number') continue;
+    let monthsUntil = null;
+    for (let m = 0; m <= LEAVE.monthsAhead; m++) {
+      if (balance + LEAVE.accrualPerMonth * m > LEAVE.max) { monthsUntil = m; break; }
+    }
+    if (monthsUntil === null) continue;
+    const projected = round(balance + LEAVE.accrualPerMonth * LEAVE.monthsAhead, 2);
+    out.push({ ...who(get), balance, projected, overBy: round(projected - LEAVE.max, 2),
+               firstOver: monthsUntil === 0 ? `Already over (${payMonth})` : addMonths(payMonth, monthsUntil) });
+  }
+  return out.sort((x, y) => y.projected - x.projected);
+}
+
+function auditPayShift(rows, getter, threshold) {
+  const out = [];
+  for (const r of rows) {
+    const get = getter(r);
+    const prior = get('NET PAY PRIOR MONTH'), current = get('NET PAY CURRENT MONTH');
+    if (typeof prior !== 'number' || typeof current !== 'number') continue;
+    const pct = get('NET PAY % CHG (CALC)');
+    const fromZero = prior === 0 && current !== 0; // % change undefined, but a real shift
+    if (!fromZero && !(typeof pct === 'number' && Math.abs(pct) > threshold)) continue;
+    out.push({ ...who(get), prior, current, change: round(current - prior, 2), pct: fromZero ? null : pct });
+  }
+  return out.sort((x, y) => Math.abs(y.pct ?? Infinity) - Math.abs(x.pct ?? Infinity));
+}
+
+/* ===== APP STATE ===== */
+
+let currentResult = null;
+let commands = [];        // commandsIn(currentResult)
+let lastAudit = null;     // { payMonth, threshold, ranAt, commands: [{ uic, name, sailors, sections }] }
+let step = 'upload';
+const openCommands = new Set(); // UICs expanded in Results
+
+const payMonthOf = result => rowGetter(result)(result.rows[0] ?? [])('PAY MONTH');
+const selectedCommands = () => commands.filter(c => isReviewed(c.uic));
+const needsSettings = () => chosenAudits().some(a => isMismatch(a) || a.id === 'payshift');
+
+function flash(msg, bad = false) {
+  const s = $('status');
+  s.textContent = msg;
+  s.classList.toggle('bad', bad);
+}
+
+// Any change to the inputs makes old results meaningless; drop them.
+function invalidateResults() {
+  lastAudit = null;
+  renderStepper();
+}
+
+/* ===== TOP TABS ===== */
+
+function showTop(top) {
+  document.querySelectorAll('.toptab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.top === top)));
+  $('top-single').hidden = top !== 'single';
+  $('top-compare').hidden = top !== 'compare';
+  $('top-editor').hidden = top !== 'editor';
+  $('top-settings').hidden = top !== 'settings';
+  if (top === 'editor') renderEditor();
+  if (top === 'settings') renderThemes();
+}
+document.querySelectorAll('.toptab').forEach(t => t.addEventListener('click', () => showTop(t.dataset.top)));
+
+/* ===== STEPS ===== */
+
+const STEPS = [
+  { id: 'upload',   label: 'Upload' },
+  { id: 'commands', label: 'Commands' },
+  { id: 'audits',   label: 'Audits' },
+  { id: 'settings', label: 'Settings', when: needsSettings },
+  { id: 'results',  label: 'Review Results' },
+  { id: 'report',   label: 'Reporting' },
+];
+const activeSteps = () => STEPS.filter(s => !s.when || s.when());
+
+// Whether a step can be opened given what has been done so far.
+function reachable(id) {
+  if (id === 'upload') return true;
+  if (!currentResult) return false;
+  if (id === 'commands') return true;
+  if (!selectedCommands().length) return false;
+  if (id === 'audits') return true;
+  if (!chosenAudits().length) return false;
+  if (id === 'settings') return needsSettings();
+  if (id === 'results' || id === 'report') return !!lastAudit;
+  return false;
+}
+
+function renderStepper() {
+  const steps = activeSteps();
+  const cur = steps.findIndex(s => s.id === step);
+  $('stepper').innerHTML = steps.map((s, i) => {
+    const cls = i === cur ? 'current' : i < cur ? 'done' : '';
+    return `<li class="${cls}"><button type="button" data-go="${s.id}"${reachable(s.id) && i !== cur ? '' : ' disabled'}>` +
+      `<span class="num">${i < cur ? '&#10003;' : i + 1}</span>${esc(s.label)}</button></li>`;
+  }).join('');
+}
+
+// `keepStatus` leaves the status line alone (used right after loading or running).
+function goTo(id, keepStatus = false) {
+  if (!reachable(id)) return;
+  if (!keepStatus) flash('');
+  step = id;
+  for (const s of STEPS) $('step-' + s.id).hidden = s.id !== id;
+  if (id === 'commands') renderCommands();
+  if (id === 'audits') renderAudits();
+  if (id === 'settings') renderSettings();
+  if (id === 'results') renderResults();
+  if (id === 'report') renderReport();
+  renderStepper();
+  window.scrollTo({ top: 0 });
+}
+
+document.addEventListener('click', e => {
+  const go = e.target.closest('[data-go]');
+  if (go && !go.disabled) goTo(go.dataset.go);
+});
+
+/* ===== 1. UPLOAD ===== */
+
+function loadFile(f) {
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onerror = () => flash(`Could not read ${f.name}.`, true);
+  reader.onload = () => {
+    const result = normalize(parseCSV(reader.result));
+    if (!result.rows.length) { flash(`${f.name} has no sailor rows to audit.`, true); return; }
+    currentResult = result;
+    commands = commandsIn(result);
+    lastAudit = null;
+
+    const payMonth = payMonthOf(result);
+    $('dayline').innerHTML = `<b>${esc(payMonth ?? 'Unknown month')}</b> pay month<span class="dot">&middot;</span>` +
+      `<b>${result.rows.length.toLocaleString()}</b> sailors<span class="dot">&middot;</span>` +
+      `<b>${commands.length}</b> commands<span class="dot">&middot;</span>${esc(f.name)}`;
+    $('btn-upload').textContent = 'Upload a different eUCFR';
+
+    const added = syncRegistry(commands, payMonth);
+    const notes = [];
+    if (added) notes.push(`${added} new command${added === 1 ? '' : 's'} added to the Command Editor`);
+    if (result.newPayTypes.length) notes.push(`new pay types found: ${result.newPayTypes.join(', ')}`);
+    const unparsed = Object.keys(result.unparsed);
+    if (unparsed.length) notes.push(`some values in an unrecognized format (${unparsed.join(', ')})`);
+    flash(`Loaded ${f.name}: ${result.rows.length.toLocaleString()} sailors across ${commands.length} commands` +
+      ` (${result.excludedCount.toLocaleString()} separated, suspended or confined left out).` +
+      (notes.length ? ` Note: ${notes.join('; ')}.` : ''));
+    goTo('commands', true);
+  };
+  reader.readAsText(f);
+}
+
+$('btn-upload').addEventListener('click', () => $('file').click());
+$('file').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
+const zone = $('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('over'); loadFile(e.dataTransfer.files[0]); });
+
+/* ===== 2. COMMANDS ===== */
+
+function renderCommands() {
+  // Units are listed under their parent command (set in the Command Editor).
+  $('cmdList').innerHTML = treeOrder(commands).map(({ item: c, depth }) => {
+    const parent = parentOf(c.uic);
+    const parentMissing = parent && !commands.some(x => x.uic === parent);
+    return `<label class="pickrow${depth ? ' child' : ''}"${depth ? ` style="padding-left:${14 + depth * 24}px"` : ''}>` +
+      `<input type="checkbox" data-review="${esc(c.uic)}"${isReviewed(c.uic) ? ' checked' : ''}>` +
+      `<span class="nm">${esc(c.name)}${parentMissing ? `<span class="under">under ${esc(registry[parent]?.name || parent)}</span>` : ''}</span>` +
+      `<span class="meta">${esc(c.uic)} &middot; ${c.rows.length} sailors</span></label>`;
+  }).join('');
+
+  // Quick pick: any known command with units in this file.
+  const inFile = new Set(commands.map(c => c.uic));
+  const parents = Object.values(registry)
+    .filter(r => descendantsOf(r.uic).some(u => inFile.has(u)))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  $('quickPick').hidden = !parents.length;
+  $('parentPick').innerHTML = '<option value="">Choose a command&hellip;</option>' + parents.map(r => {
+    const n = [r.uic, ...descendantsOf(r.uic)].filter(u => inFile.has(u)).length;
+    return `<option value="${esc(r.uic)}">${esc(r.name || r.uic)} (${n} in this file)</option>`;
+  }).join('');
+  syncCommands();
+}
+
+$('parentPick').addEventListener('change', e => {
+  const uic = e.target.value;
+  if (!uic) return;
+  const pick = new Set([uic, ...descendantsOf(uic)]);
+  for (const c of commands) reviewCommands[c.uic] = pick.has(c.uic);
+  store.save('eucfr.reviewCommands', reviewCommands);
+  invalidateResults();
+  renderCommands();
+  flash(`Selected ${registry[uic]?.name || uic} and its units.`);
+});
+
+function syncCommands() {
+  const sel = selectedCommands();
+  $('cmdAll').checked = sel.length === commands.length && sel.length > 0;
+  $('cmdAll').indeterminate = sel.length > 0 && sel.length < commands.length;
+  const sailors = sel.reduce((n, c) => n + c.rows.length, 0);
+  $('cmdCount').textContent = `${sel.length} of ${commands.length} commands selected (${sailors.toLocaleString()} sailors).`;
+  $('next-commands').disabled = !sel.length;
+  $('cmdHint').textContent = sel.length ? '' : 'Select at least one command.';
+  renderStepper();
+}
+
+$('cmdList').addEventListener('change', e => {
+  const uic = e.target.dataset.review;
+  if (uic === undefined) return;
+  reviewCommands[uic] = e.target.checked;
+  store.save('eucfr.reviewCommands', reviewCommands);
+  invalidateResults();
+  syncCommands();
+});
+$('cmdAll').addEventListener('change', e => {
+  for (const c of commands) reviewCommands[c.uic] = e.target.checked;
+  store.save('eucfr.reviewCommands', reviewCommands);
+  invalidateResults();
+  renderCommands();
+});
+$('next-commands').addEventListener('click', () => goTo('audits'));
+
+/* ===== 3. AUDITS ===== */
+
+function renderAudits() {
+  $('auditList').innerHTML = AUDIT_TYPES.map(a =>
+    `<label class="pickrow"><input type="checkbox" data-audit="${a.id}"${selectedAudits[a.id] ? ' checked' : ''}>` +
+    `<span><span class="nm">${esc(a.label)}</span><span class="desc">${esc(a.desc)}</span></span></label>`).join('');
+  syncAudits();
+}
+
+function syncAudits() {
+  const n = chosenAudits().length;
+  $('auditAll').checked = n === AUDIT_TYPES.length;
+  $('auditAll').indeterminate = n > 0 && n < AUDIT_TYPES.length;
+  $('next-audits').disabled = !n;
+  $('next-audits').textContent = needsSettings() ? 'Next' : 'Run audit';
+  $('auditHint').textContent = n ? '' : 'Select at least one audit.';
+  renderStepper();
+}
+
+$('auditList').addEventListener('change', e => {
+  const id = e.target.dataset.audit;
+  if (!id) return;
+  selectedAudits[id] = e.target.checked;
+  store.save('eucfr.selectedAudits', selectedAudits);
+  invalidateResults();
+  syncAudits();
+});
+$('auditAll').addEventListener('change', e => {
+  for (const a of AUDIT_TYPES) selectedAudits[a.id] = e.target.checked;
+  store.save('eucfr.selectedAudits', selectedAudits);
+  invalidateResults();
+  renderAudits();
+});
+$('next-audits').addEventListener('click', () => needsSettings() ? goTo('settings') : runAudit());
+
+/* ===== 4. SETTINGS ===== */
+
+const thresholdInput = $('payShiftThreshold');
+thresholdInput.value = auditSettings.payShiftThreshold;
+const thresholdValid = () => thresholdInput.value !== '' && Number.isFinite(Number(thresholdInput.value)) && Number(thresholdInput.value) >= 0;
+
+function renderSettings() {
+  const mism = chosenAudits().filter(isMismatch);
+  const sel = selectedCommands();
+  $('entCard').hidden = !mism.length;
+  $('mealNote').hidden = !mism.some(a => a.id === 'meal');
+  $('payShiftCard').hidden = !selectedAudits.payshift;
+
+  if (mism.length) {
+    const head = '<tr><th>UIC</th><th>Command</th>' + mism.map(a =>
+      `<th class="c"><label class="hctl">${esc(a.short)}` +
+      `<input type="checkbox" data-allent="${a.id}" title="Check or uncheck ${esc(a.short)} for all commands"></label></th>`).join('') + '</tr>';
+    const body = sel.map(c => '<tr>' + `<td class="mono">${esc(c.uic)}</td>` +
+      `<td>${esc(c.name)}<span class="qsum">Last updated ${esc(fmtStamp(entitlements[c.uic]?.updated))}</span></td>` +
+      mism.map(a => `<td class="c"><input type="checkbox" data-uic="${esc(c.uic)}" data-ent="${a.id}"` +
+        `${isEntitled(c.uic, a.id) ? ' checked' : ''} aria-label="${esc(c.name)} entitled to ${esc(a.short)}"></td>`).join('') +
+      '</tr>').join('');
+    $('entTable').innerHTML = `<div class="matrixwrap"><table class="matrix"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+    for (const a of mism) {
+      const on = sel.filter(c => isEntitled(c.uic, a.id)).length;
+      const box = $('entTable').querySelector(`[data-allent="${a.id}"]`);
+      box.checked = on === sel.length;
+      box.indeterminate = on > 0 && on < sel.length;
+    }
+  }
+  syncSettings();
+}
+
+// Unchecked (or never set) means the command is not entitled.
+const isEntitled = (uic, id) => entitlements[uic]?.[id] === 'yes';
+
+function settingsProblem() {
+  if (selectedAudits.payshift && !thresholdValid()) return 'Enter a pay shift threshold of 0 or more.';
+  return '';
+}
+
+function syncSettings() {
+  const problem = settingsProblem();
+  $('run-settings').disabled = !!problem;
+  $('settingsHint').textContent = problem;
+  thresholdInput.classList.toggle('invalid', !!selectedAudits.payshift && !thresholdValid());
+}
+
+// ISO timestamp -> "2025-10-23 14:05" in local time; "never" if not set.
+function fmtStamp(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d)) return 'never';
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+$('entTable').addEventListener('change', e => {
+  const t = e.target, d = t.dataset;
+  const now = new Date().toISOString();
+  // Stamps a command's "Last updated" only when one of its settings actually changes.
+  const set = (uic, id, on) => {
+    const ent = (entitlements[uic] ??= {});
+    const v = on ? 'yes' : 'no';
+    if (ent[id] !== v) { ent[id] = v; ent.updated = now; }
+  };
+  if (d.allent) for (const c of selectedCommands()) set(c.uic, d.allent, t.checked);
+  else if (d.ent) set(d.uic, d.ent, t.checked);
+  else return;
+  store.save('eucfr.entitlements', entitlements);
+  invalidateResults();
+  renderSettings();
+});
+
+thresholdInput.addEventListener('input', () => {
+  if (thresholdValid()) {
+    auditSettings.payShiftThreshold = Number(thresholdInput.value);
+    store.save('eucfr.auditSettings', auditSettings);
+  }
+  invalidateResults();
+  syncSettings();
+});
+
+$('run-settings').addEventListener('click', runAudit);
+
+/* ===== RUN ===== */
+
+function runAudit() {
+  if (!currentResult || !selectedCommands().length || !chosenAudits().length || (needsSettings() && settingsProblem())) return;
+  const getter = rowGetter(currentResult);
+  const payMonth = payMonthOf(currentResult);
+  const threshold = auditSettings.payShiftThreshold;
+  const audits = chosenAudits();
+
+  const audited = selectedCommands().map(c => ({
+    uic: c.uic, name: c.name, sailors: c.rows.length,
+    sections: audits.map(a => {
+      const s = { id: a.id, label: a.label, ignorable: isMismatch(a) };
+      if (isMismatch(a)) {
+        const v = isEntitled(c.uic, a.id) ? 'yes' : 'no';
+        s.setting = v === 'yes' ? a.yes : a.no;
+        s.rows = auditMismatch(a, c.rows, getter, v);
+      } else if (a.id === 'gtc') s.rows = auditGTC(c.rows, getter);
+      else if (a.id === 'leave') s.rows = auditLeave(c.rows, getter, payMonth);
+      else if (a.id === 'payshift') s.rows = auditPayShift(c.rows, getter, threshold);
+      return s;
+    }),
+  }));
+
+  lastAudit = { payMonth, threshold, commands: audited, ranAt: new Date() };
+  reportUics = new Set(audited.map(c => c.uic));
+  reportEdited = false;
+  openCommands.clear();
+  const withHits = audited.filter(c => shownFindings(c));
+  if (withHits.length <= 3) withHits.forEach(c => openCommands.add(c.uic));
+  flash(`Audit complete: ${audited.length} command${audited.length === 1 ? '' : 's'} checked.`);
+  goTo('results', true);
+}
+
+/* ===== 5. RESULTS ===== */
+
+const sectionIgnored = (c, s) => s.ignorable && isIgnored(lastAudit.payMonth, c.uic, s.id);
+const shownFindings = c => c.sections.reduce((n, s) => n + (sectionIgnored(c, s) ? 0 : s.rows.length), 0);
+
+const NAME_COLS = [
+  { label: 'Name', value: r => r.name },
+  { label: 'Grade', value: r => r.grade },
+];
+
+function sectionTable(s) {
+  if (!s.rows.length) return '<p class="empty">Nothing flagged.</p>';
+  if (s.ignorable) return table([...NAME_COLS, { label: 'Issue', value: r => r.issue }], s.rows);
+  if (s.id === 'gtc') return table([...NAME_COLS,
+    { label: 'Amount', type: 'money', value: r => r.amount },
+    { label: 'Days', type: 'number', value: r => r.days },
+    { label: 'Status', value: r => r.status }], s.rows);
+  if (s.id === 'leave') return table([...NAME_COLS,
+    { label: `Balance (${lastAudit.payMonth})`, type: 'number', value: r => r.balance },
+    { label: `Projected (${addMonths(lastAudit.payMonth, LEAVE.monthsAhead)})`, type: 'number', value: r => r.projected },
+    { label: `Over ${LEAVE.max} by`, type: 'number', value: r => r.overBy, cls: () => 'flag' },
+    { label: `First month over ${LEAVE.max}`, value: r => r.firstOver }], s.rows);
+  if (s.id === 'payshift') return table([...NAME_COLS,
+    { label: 'Net pay prior', type: 'money', value: r => r.prior },
+    { label: 'Net pay current', type: 'money', value: r => r.current },
+    { label: 'Change $', type: 'money', value: r => r.change, cls: r => r.change >= 0 ? 'up' : 'down' },
+    { label: 'Change %', value: r => r.pct === null ? 'New (prior $0)' : `${r.pct > 0 ? '+' : ''}${r.pct.toFixed(2)}%`,
+      cls: r => ((r.pct ?? 1) >= 0 ? 'up' : 'down') + ' num' }], s.rows);
+  return '';
+}
+
+function sectionSubtitle(s) {
+  if (s.ignorable) return `Command set to: ${s.setting}`;
+  if (s.id === 'gtc' && s.rows.length) return `$${money.format(s.rows.reduce((t, r) => t + (r.amount ?? 0), 0))} total`;
+  if (s.id === 'payshift') return `More than ±${lastAudit.threshold}%`;
+  if (s.id === 'leave') return `Over ${LEAVE.max} days by ${addMonths(lastAudit.payMonth, LEAVE.monthsAhead)}`;
+  return '';
+}
+
+function renderResults() {
+  const A = lastAudit;
+  let html = '<div class="toolbar"><button class="btn" data-act="expand">Expand all</button>' +
+    '<button class="btn" data-act="collapse">Collapse all</button><span class="spacer"></span>' +
+    `<span class="tiny" style="margin:0">Pay month ${esc(A.payMonth)} &middot; run ${esc(A.ranAt.toLocaleTimeString())}</span></div>`;
+
+  html += A.commands.map(c => {
+    const n = shownFindings(c);
+    const tags = c.sections.map(s => {
+      const ign = sectionIgnored(c, s);
+      return `<span class="tag${s.rows.length && !ign ? ' hit' : ''}${ign ? ' ign' : ''}">${esc(s.label)}<b>${s.rows.length}</b></span>`;
+    }).join('');
+    const subs = c.sections.map(s => {
+      const ign = sectionIgnored(c, s);
+      return `<div class="sub${ign ? ' ignored' : ''}"><div class="subhead">` +
+        `<h4>${esc(s.label)}</h4><span class="n${s.rows.length && !ign ? ' bad' : ''}">${s.rows.length} flagged</span>` +
+        `<span class="tiny" style="margin:0">${esc(sectionSubtitle(s))}</span>` +
+        (s.ignorable && s.rows.length ? `<span class="spacer"></span><label class="check"><input type="checkbox" data-ignore="${esc(s.id)}" data-uic="${esc(c.uic)}"${ign ? ' checked' : ''}> Ignore these mismatches</label>` : '') +
+        `</div>${sectionTable(s)}</div>`;
+    }).join('');
+    return `<details class="cmd ${n ? 'has' : 'clear'}" data-uic="${esc(c.uic)}"${openCommands.has(c.uic) ? ' open' : ''}>` +
+      `<summary><span class="nm">${esc(c.name)}</span><span class="uic">${esc(c.uic)} &middot; ${c.sailors} sailors</span>` +
+      `<span class="tags">${tags}</span></summary><div class="cmdbody">${subs}</div></details>`;
+  }).join('');
+
+  $('resultsBody').innerHTML = html;
+}
+
+$('results-back').addEventListener('click', () => goTo(needsSettings() ? 'settings' : 'audits'));
+
+$('resultsBody').addEventListener('toggle', e => {
+  const d = e.target.closest?.('details.cmd');
+  if (!d) return;
+  if (d.open) openCommands.add(d.dataset.uic); else openCommands.delete(d.dataset.uic);
+}, true);
+
+$('resultsBody').addEventListener('click', e => {
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if (!act) return;
+  document.querySelectorAll('#resultsBody details.cmd').forEach(d => { d.open = act === 'expand'; });
+});
+
+$('resultsBody').addEventListener('change', e => {
+  const t = e.target;
+  if (!t.dataset.ignore) return;
+  ((auditIgnores[lastAudit.payMonth] ??= {})[t.dataset.uic] ??= {})[t.dataset.ignore] = t.checked;
+  store.save('eucfr.auditIgnores', auditIgnores);
+  openCommands.add(t.dataset.uic);
+  renderResults();
+});
+
+/* ===== 6. REPORTING ===== */
+
+let reportUics = new Set(); // commands included in the report
+let reportEdited = false;   // the user has typed in the body since it was generated
+
+const MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+// Date-time group in Zulu time, e.g. 240315Z OCT 26.
+const dtg = d => `${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}Z ${MONTH_ABBR[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`;
+// "a", "a and b", "a, b and c"
+const listJoin = xs => xs.length < 3 ? xs.join(' and ') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
+const reportCommands = () => lastAudit.commands.filter(c => reportUics.has(c.uic));
+const auditedTypes = () => AUDIT_TYPES.filter(a => lastAudit.commands.some(c => c.sections.some(s => s.id === a.id)));
+
+// One report line's detail text for a flagged sailor.
+function reportDetail(id, r) {
+  if (id === 'gtc') return [r.days !== null ? `${r.days} days delinquent` : null, r.amount !== null ? `$${money.format(r.amount)}` : null, r.status].filter(Boolean).join(', ');
+  if (id === 'leave') return `${r.balance} days of leave, projected ${r.projected} by ${addMonths(lastAudit.payMonth, LEAVE.monthsAhead)}` +
+    (r.firstOver.startsWith('Already') ? ` (already over ${LEAVE.max})` : ` (over ${LEAVE.max} in ${r.firstOver})`);
+  if (id === 'payshift') return `net pay $${money.format(r.prior)} to $${money.format(r.current)} ` +
+    (r.pct === null ? '(new pay; prior month $0)' : `(${r.pct > 0 ? '+' : ''}${r.pct.toFixed(2)}%)`);
+  return r.issue;
+}
+
+function buildReport() {
+  const A = lastAudit;
+  const cmds = reportCommands();
+  const types = auditedTypes();
+  const out = [
+    `On ${dtg(A.ranAt)}, eUCFR Audits were conducted for the following commands: ${cmds.map(c => c.name).join(', ')}. ` +
+    `The features audited were ${listJoin(types.map(a => a.label))}. ` +
+    'Results are below; commands are encouraged to review and make corrections as required.',
+  ];
+  for (const a of types) {
+    out.push('', a.label.toUpperCase());
+    const lines = [], ignored = [];
+    for (const c of cmds) {
+      const s = c.sections.find(x => x.id === a.id);
+      if (!s) continue;
+      if (sectionIgnored(c, s)) { if (s.rows.length) ignored.push(c.name); continue; }
+      for (const r of s.rows) lines.push(`${c.name} - ${r.name}, ${reportDetail(a.id, r)}`);
+    }
+    out.push(...(lines.length ? lines : ['No discrepancies found.']));
+    if (ignored.length) out.push(`(Reviewed and not included: ${ignored.join(', ')})`);
+  }
+  $('repSubject').value = `eUCFR Audit Results - ${A.payMonth} pay month`;
+  $('repBody').value = out.join('\n');
+  reportEdited = false;
+  repHint('You can edit the text before sending. Changing the commands above rebuilds it.');
+}
+
+function repHint(msg, bad = false) {
+  $('repHint').textContent = msg;
+  $('repHint').style.color = bad ? 'var(--port)' : '';
+}
+
+function renderReport() {
+  const A = lastAudit;
+  const cmds = reportCommands();
+
+  // Summary boxes (moved here from Review Results), for the commands in the report
+  const totals = {};
+  for (const c of cmds) for (const s of c.sections) {
+    totals[s.id] ??= 0;
+    if (!sectionIgnored(c, s)) totals[s.id] += s.rows.length;
+  }
+  const withFindings = cmds.filter(c => shownFindings(c)).length;
+  const sailors = cmds.reduce((n, c) => n + c.sailors, 0);
+  $('reportReadout').innerHTML = '<div class="readout">' +
+    `<div class="rblock"><h3>Audited</h3><p class="stat"><strong>${cmds.length}</strong>commands</p>` +
+      `<p class="stat"><strong>${sailors.toLocaleString()}</strong>sailors</p></div>` +
+    `<div class="rblock"><h3>Commands with findings</h3><p class="stat ${withFindings ? 'bad' : 'good'}"><strong>${withFindings}</strong>of ${cmds.length}</p></div>` +
+    auditedTypes().map(a =>
+      `<div class="rblock"><h3>${esc(a.label)}</h3><p class="stat ${totals[a.id] ? 'bad' : 'good'}"><strong>${(totals[a.id] ?? 0).toLocaleString()}</strong>flagged</p></div>`).join('') +
+    '</div>';
+
+  $('repList').innerHTML = A.commands.map(c => {
+    const n = shownFindings(c);
+    return `<label class="pickrow"><input type="checkbox" data-rep="${esc(c.uic)}"${reportUics.has(c.uic) ? ' checked' : ''}>` +
+      `<span class="nm">${esc(c.name)}</span><span class="meta">${esc(c.uic)} &middot; ${n} finding${n === 1 ? '' : 's'}</span></label>`;
+  }).join('');
+  $('repAll').checked = reportUics.size === A.commands.length;
+  $('repAll').indeterminate = reportUics.size > 0 && reportUics.size < A.commands.length;
+
+  const none = !cmds.length;
+  for (const id of ['rep-copy', 'rep-email', 'rep-regen']) $(id).disabled = none;
+  if (none) { $('repBody').value = ''; repHint('Select at least one command to build the report.', true); }
+  else if (!reportEdited) buildReport();
+  else repHint('You have edited this text. Click Regenerate to rebuild it from the latest results (your edits will be replaced).');
+}
+
+$('repList').addEventListener('change', e => {
+  const uic = e.target.dataset.rep;
+  if (uic === undefined) return;
+  if (e.target.checked) reportUics.add(uic); else reportUics.delete(uic);
+  reportEdited = false; // selection changes rebuild the text
+  renderReport();
+});
+$('repAll').addEventListener('change', e => {
+  reportUics = new Set(e.target.checked ? lastAudit.commands.map(c => c.uic) : []);
+  reportEdited = false;
+  renderReport();
+});
+$('repBody').addEventListener('input', () => { reportEdited = true; });
+$('rep-regen').addEventListener('click', () => { buildReport(); });
+
+// Copies text to the clipboard. The async API is given a second to answer (it can
+// stall waiting on a permission), then the older select-and-copy method is tried.
+async function copyText(text) {
+  try {
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000));
+    await Promise.race([navigator.clipboard.writeText(text), timeout]);
+    return true;
+  } catch { /* fall back below */ }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  ta.remove();
+  return ok;
+}
+
+$('rep-copy').addEventListener('click', async () => {
+  const ok = await copyText(`Subject: ${$('repSubject').value}\n\n${$('repBody').value}`);
+  repHint(ok ? 'Report copied. Paste it into an email.' : 'Could not copy automatically. Click in the text, select all, and copy.', !ok);
+});
+
+// Long bodies get cut off by many mail programs when passed in a mailto link,
+// so those open with the subject only and the body goes to the clipboard.
+const MAILTO_LIMIT = 1800;
+$('rep-email').addEventListener('click', async () => {
+  const subject = $('repSubject').value, body = $('repBody').value;
+  let href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (href.length > MAILTO_LIMIT) {
+    const ok = await copyText(body);
+    href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(ok ? 'Paste the report here (it has been copied to your clipboard).' : '')}`;
+    repHint(ok ? 'The report is too long to pass to your email program directly, so it was copied. Paste it into the new email.'
+               : 'The report is too long to pass to your email program directly. Use Copy report, then paste it into the email.', !ok);
+  } else {
+    repHint('Opened in your email program.');
+  }
+  const a = document.createElement('a');
+  a.href = href;
+  a.click();
+});
+
+/* ===== COMMAND EDITOR ===== */
+
+// Long-term record of every command seen, keyed by UIC:
+// { [UIC]: { uic, name, sndl, notes, aliases: [], firstSeen, lastSeen, lastSailors,
+//            log: [{ id, item, status, start, end, note, added }] } }
+// Log entries record when a command SHOULD have (status 'yes') or not have
+// ('no') an item, from `start` through `end` (YYYY-MM-DD; blank end = ongoing).
+let registry = store.load('eucfr.commandRegistry', {});
+const saveRegistry = () => store.save('eucfr.commandRegistry', registry);
+const LOG_ITEMS = MISMATCH_AUDITS.map(a => ({ id: a.id, label: a.short, yes: a.yes, no: a.no }));
+const logItem = Object.fromEntries(LOG_ITEMS.map(i => [i.id, i]));
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+const DATE_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+const isDate = s => DATE_RE.test(s ?? '') && new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
+
+// Log dates as YYYY-MM-DD. Month-only values (from earlier versions or exports)
+// become the first day of the month for a start, the last day for an end.
+function toLogDate(s, edge) {
+  if (isDate(s)) return s;
+  if (!MONTH_RE.test(s ?? '')) return null;
+  if (edge === 'start') return `${s}-01`;
+  const [y, m] = s.split('-').map(Number);
+  return `${s}-${pad(new Date(Date.UTC(y, m, 0)).getUTCDate())}`;
+}
+for (const rec of Object.values(registry)) for (const e of rec.log ?? []) {
+  e.start = toLogDate(e.start, 'start') ?? e.start;
+  if (e.end) e.end = toLogDate(e.end, 'end') ?? e.end;
+}
+let selectedUic = null;
+let armedDelete = null; // UIC whose delete button has been clicked once
+
+const newRecord = (uic, name) => ({ uic, name, sndl: '', notes: '', parent: '', aliases: [], firstSeen: null, lastSeen: null, lastSailors: null, log: [] });
+
+/* Command hierarchy: each command may name one parent command (by UIC). */
+const parentOf = uic => registry[uic]?.parent || '';
+const childrenOf = uic => Object.values(registry).filter(r => r.parent === uic).map(r => r.uic);
+// Every unit below a command, at any depth (cycle-safe).
+function descendantsOf(uic) {
+  const out = [], seen = new Set([uic]), queue = [uic];
+  while (queue.length) for (const c of childrenOf(queue.shift())) {
+    if (seen.has(c)) continue;
+    seen.add(c); out.push(c); queue.push(c);
+  }
+  return out;
+}
+function ancestorsOf(uic) {
+  const out = [], seen = new Set([uic]);
+  for (let p = parentOf(uic); p && !seen.has(p); p = parentOf(p)) { out.push(p); seen.add(p); }
+  return out;
+}
+// Orders items (anything with .uic and .name) parent-first, units right after
+// their parent. Items whose parent isn't in the list are top level.
+function treeOrder(items) {
+  const byUic = new Map(items.map(i => [i.uic, i]));
+  const kids = new Map();
+  const roots = [];
+  for (const i of items) {
+    const p = parentOf(i.uic);
+    if (p && byUic.has(p) && p !== i.uic) (kids.get(p) ?? kids.set(p, []).get(p)).push(i);
+    else roots.push(i);
+  }
+  const byName = (a, b) => (a.name || '').localeCompare(b.name || '') || a.uic.localeCompare(b.uic);
+  const out = [], seen = new Set();
+  const walk = (i, depth) => {
+    if (seen.has(i.uic)) return;
+    seen.add(i.uic);
+    out.push({ item: i, depth });
+    for (const k of (kids.get(i.uic) ?? []).sort(byName)) walk(k, depth + 1);
+  };
+  roots.sort(byName).forEach(i => walk(i, 0));
+  items.filter(i => !seen.has(i.uic)).sort(byName).forEach(i => walk(i, 0)); // anything caught in a loop
+  return out;
+}
+
+// Adds/updates every command from a loaded eUCFR. Returns how many were new.
+function syncRegistry(cmds, payMonth) {
+  let added = 0;
+  for (const c of cmds) {
+    if (c.uic === '(none)') continue;
+    let rec = registry[c.uic];
+    if (!rec) { rec = registry[c.uic] = newRecord(c.uic, c.name); added++; }
+    if (c.name && c.name !== rec.name && !rec.aliases.includes(c.name)) rec.aliases.push(c.name);
+    if (MONTH_RE.test(payMonth ?? '')) {
+      if (!rec.firstSeen || payMonth < rec.firstSeen) rec.firstSeen = payMonth;
+      if (!rec.lastSeen || payMonth >= rec.lastSeen) { rec.lastSeen = payMonth; rec.lastSailors = c.rows.length; }
+    }
+  }
+  saveRegistry();
+  return added;
+}
+
+// Log entries for the same item whose date ranges overlap with a different status.
+function overlappingIds(log) {
+  const ids = new Set();
+  const end = e => e.end || '9999-12-31';
+  for (let i = 0; i < log.length; i++) for (let j = i + 1; j < log.length; j++) {
+    const a = log[i], b = log[j];
+    if (a.item === b.item && a.status !== b.status && a.start <= end(b) && b.start <= end(a)) { ids.add(a.id); ids.add(b.id); }
+  }
+  return ids;
+}
+
+function regStatus(msg) { $('regStatus').textContent = msg; }
+
+function renderEditor() {
+  const recs = Object.values(registry).sort((a, b) => a.name.localeCompare(b.name) || a.uic.localeCompare(b.uic));
+  const f = $('regFilter').value.trim().toUpperCase();
+  const shown = f ? recs.filter(r => r.uic.toUpperCase().includes(f) || r.name.toUpperCase().includes(f) ||
+    (r.sndl || '').toUpperCase().includes(f) || r.aliases.some(a => a.toUpperCase().includes(f))) : recs;
+  if (selectedUic && !registry[selectedUic]) selectedUic = null;
+  if (!selectedUic && shown.length) selectedUic = shown[0].uic;
+
+  $('regCount').textContent = recs.length ? `${shown.length} of ${recs.length} commands` : '';
+  // Unfiltered: show the hierarchy. Filtered: a flat list of matches.
+  const rows = f ? shown.map(item => ({ item, depth: 0 })) : treeOrder(shown);
+  $('regList').innerHTML = rows.length ? rows.map(({ item: r, depth }) => {
+    const units = childrenOf(r.uic).length;
+    return `<button type="button" class="regrow${depth ? ' child' : ''}" data-uic="${esc(r.uic)}" aria-current="${r.uic === selectedUic}"` +
+      `${depth ? ` style="padding-left:${12 + depth * 20}px"` : ''}>` +
+      `<span class="nm">${esc(r.name || '(unnamed)')}</span>` +
+      `<span class="meta">${esc(r.uic)}${units ? ` &middot; ${units} unit${units === 1 ? '' : 's'}` : ''} &middot; ${r.log.length} log entr${r.log.length === 1 ? 'y' : 'ies'}</span></button>`;
+  }).join('')
+    : `<p class="empty" style="padding:12px">${recs.length ? 'No commands match the filter.' : 'No commands yet. Upload a eUCFR or add one below.'}</p>`;
+  renderDetail();
+}
+
+function renderDetail() {
+  const r = registry[selectedUic];
+  const box = $('regDetail');
+  if (!r) { box.innerHTML = '<div class="card"><p class="empty">Select a command to view and edit it.</p></div>'; return; }
+  const overlap = overlappingIds(r.log);
+  const log = [...r.log].sort((a, b) => a.item.localeCompare(b.item) || a.start.localeCompare(b.start));
+  const nameOf = u => registry[u]?.name || u;
+  const byName = (a, b) => nameOf(a).localeCompare(nameOf(b));
+  // A command can't sit under itself or under one of its own units.
+  const blocked = new Set([r.uic, ...descendantsOf(r.uic)]);
+  const parentChoices = Object.keys(registry).filter(u => !blocked.has(u)).sort(byName);
+  const units = childrenOf(r.uic).sort(byName);
+  const unitChoices = Object.keys(registry)
+    .filter(u => u !== r.uic && !ancestorsOf(r.uic).includes(u) && parentOf(u) !== r.uic).sort(byName);
+
+  box.innerHTML =
+    `<div class="card">` +
+      `<div class="section-head"><h2>${esc(r.name || '(unnamed)')} <span class="uic" style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:0">${esc(r.uic)}</span></h2>` +
+      `<button class="btn btn-danger${armedDelete === r.uic ? ' armed' : ''}" id="reg-delete">${armedDelete === r.uic ? 'Click again to delete' : 'Delete command'}</button></div>` +
+      `<div class="fieldgrid">` +
+        `<label class="field"><span>Command name (as on eUCFR)</span><input type="text" data-field="name" value="${esc(r.name)}" /></label>` +
+        `<label class="field"><span>SNDL title</span><input type="text" data-field="sndl" value="${esc(r.sndl || '')}" placeholder="Official title from the SNDL" /></label>` +
+      `</div>` +
+      `<label class="field"><span>Notes</span><textarea data-field="notes" placeholder="Anything worth remembering about this command">${esc(r.notes || '')}</textarea></label>` +
+      `<div class="facts" style="margin-top:10px">` +
+        `<span>First seen <b>${esc(r.firstSeen ?? '—')}</b></span>` +
+        `<span>Last seen <b>${esc(r.lastSeen ?? '—')}</b></span>` +
+        `<span>Sailors last seen <b>${r.lastSailors ?? '—'}</b></span>` +
+        (r.aliases.length ? `<span>Other names on eUCFRs <b>${esc(r.aliases.join(', '))}</b></span>` : '') +
+      `</div>` +
+    `</div>` +
+
+    `<div class="card">` +
+      `<div class="section-head"><h2>Chain of command</h2></div>` +
+      `<label class="field" style="margin-bottom:12px"><span>Parent command</span>` +
+        `<select class="pick" data-field="parent" style="width:100%;max-width:360px">` +
+        `<option value="">None (top level)</option>` +
+        parentChoices.map(u => `<option value="${esc(u)}"${r.parent === u ? ' selected' : ''}>${esc(nameOf(u))} (${esc(u)})</option>`).join('') +
+        `</select></label>` +
+      `<div class="field"><span>Units under this command</span></div>` +
+      (units.length ? `<table class="logtable"><tbody>` + units.map(u =>
+          `<tr><td>${esc(nameOf(u))}</td><td class="when">${esc(u)}</td>` +
+          `<td class="when">${childrenOf(u).length ? `${descendantsOf(u).length} more below` : ''}</td>` +
+          `<td class="act"><button class="rowdel" data-unlink="${esc(u)}" title="Remove from this command" aria-label="Remove ${esc(nameOf(u))} from this command">&#10005;</button></td></tr>`).join('') +
+        `</tbody></table>` : '<p class="empty" style="margin-top:4px">None yet.</p>') +
+      `<div class="addrow">` +
+        `<select id="unitPick" style="flex:1;min-width:200px" aria-label="Unit to add">` +
+        `<option value="">Add a unit&hellip;</option>` +
+        unitChoices.map(u => `<option value="${esc(u)}">${esc(nameOf(u))} (${esc(u)})${parentOf(u) ? ` &mdash; now under ${esc(nameOf(parentOf(u)))}` : ''}</option>`).join('') +
+        `</select>` +
+        `<button class="btn btn-primary" id="unit-add">Add unit</button>` +
+      `</div>` +
+      `<p class="tiny">A command's units (and their units) can be selected together in the Commands step of an audit.</p>` +
+    `</div>` +
+
+    `<div class="card">` +
+      `<div class="section-head"><h2>Entitlement log</h2></div>` +
+      `<p class="tiny" style="margin:0 0 10px">Record when this command should start or stop having each item. Click a date box to pick from a calendar. Leave "To" blank if it is still in effect.</p>` +
+      (log.length ? `<table class="logtable"><thead><tr><th>Item</th><th>Should be</th><th>From</th><th>To</th><th>Note</th><th></th></tr></thead><tbody>` +
+        log.map(e => {
+          const it = logItem[e.item];
+          return `<tr class="${overlap.has(e.id) ? 'overlap' : ''}"${overlap.has(e.id) ? ' title="Overlaps another entry for this item with the opposite setting"' : ''}>` +
+            `<td>${esc(it?.label ?? e.item)}</td><td class="${e.status}">${esc(it ? (e.status === 'yes' ? it.yes : it.no) : e.status)}</td>` +
+            `<td class="when">${esc(e.start)}</td><td class="when">${esc(e.end || 'Ongoing')}</td><td>${esc(e.note || '')}</td>` +
+            `<td class="act"><button class="rowdel" data-dellog="${esc(e.id)}" title="Delete entry" aria-label="Delete entry">&#10005;</button></td></tr>`;
+        }).join('') + '</tbody></table>' : '<p class="empty">No entries yet.</p>') +
+      (overlap.size ? '<p class="tiny" style="color:var(--warn)">Highlighted entries overlap another entry for the same item with the opposite setting.</p>' : '') +
+      `<div class="logadd">` +
+        `<label class="field"><span>Item</span><select id="logItem">${LOG_ITEMS.map(i => `<option value="${i.id}">${esc(i.label)}</option>`).join('')}</select></label>` +
+        `<label class="field"><span>Should be</span><select id="logStatus"></select></label>` +
+        `<label class="field"><span>From</span><input type="date" id="logStart" class="datepick" /></label>` +
+        `<label class="field"><span>To (optional)</span><input type="date" id="logEnd" class="datepick" /></label>` +
+        `<label class="field note"><span>Note (optional)</span><input type="text" id="logNote" /></label>` +
+        `<button class="btn btn-primary" id="log-add">Add entry</button>` +
+      `</div>` +
+      `<p class="tiny" id="logHint"></p>` +
+    `</div>`;
+  syncLogStatusOptions();
+}
+
+function syncLogStatusOptions() {
+  const it = logItem[$('logItem').value];
+  $('logStatus').innerHTML = `<option value="yes">${esc(it.yes)}</option><option value="no">${esc(it.no)}</option>`;
+}
+
+$('regFilter').addEventListener('input', renderEditor);
+
+$('regList').addEventListener('click', e => {
+  const row = e.target.closest('[data-uic]');
+  if (!row) return;
+  selectedUic = row.dataset.uic;
+  armedDelete = null;
+  renderEditor();
+});
+
+$('reg-add').addEventListener('click', () => {
+  const uic = $('newUic').value.trim().toUpperCase();
+  const name = $('newName').value.trim();
+  if (!/^[0-9A-Z]{5,6}$/.test(uic)) { regStatus('Enter a 5- or 6-character UIC.'); return; }
+  if (registry[uic]) { selectedUic = uic; renderEditor(); regStatus(`UIC ${uic} is already listed as ${registry[uic].name || '(unnamed)'}.`); return; }
+  registry[uic] = newRecord(uic, name);
+  saveRegistry();
+  selectedUic = uic;
+  $('newUic').value = $('newName').value = '';
+  regStatus(`Added ${name || uic}.`);
+  renderEditor();
+});
+
+// Field edits save when the field loses focus.
+$('regDetail').addEventListener('change', e => {
+  const r = registry[selectedUic];
+  if (!r) return;
+  if (e.target.id === 'logItem') { syncLogStatusOptions(); return; }
+  const field = e.target.dataset.field;
+  if (!field) return;
+  r[field] = e.target.value.trim();
+  saveRegistry();
+  regStatus(field === 'parent'
+    ? (r.parent ? `${r.name || r.uic} is now under ${registry[r.parent]?.name || r.parent}.` : `${r.name || r.uic} is now top level.`)
+    : 'Saved.');
+  if (field === 'name' || field === 'parent') renderEditor();
+});
+
+// Clicking anywhere in a date box opens the calendar, not just the small icon.
+$('regDetail').addEventListener('click', e => {
+  if (e.target.classList?.contains('datepick')) { try { e.target.showPicker(); } catch { /* older browsers: icon still works */ } }
+});
+
+$('regDetail').addEventListener('click', e => {
+  const r = registry[selectedUic];
+  if (!r) return;
+  if (e.target.id === 'reg-delete') {
+    if (armedDelete !== r.uic) { armedDelete = r.uic; renderDetail(); return; }
+    const orphans = childrenOf(r.uic);
+    for (const u of orphans) registry[u].parent = '';
+    delete registry[r.uic];
+    saveRegistry();
+    armedDelete = null;
+    regStatus(`Deleted ${r.name || r.uic}. It will be added again if it appears in a future eUCFR.` +
+      (orphans.length ? ` Its ${orphans.length} unit${orphans.length === 1 ? ' is' : 's are'} now top level.` : ''));
+    renderEditor();
+    return;
+  }
+  if (armedDelete) { armedDelete = null; renderDetail(); }
+
+  if (e.target.id === 'unit-add') {
+    const u = $('unitPick').value;
+    if (!u) { regStatus('Choose a unit to add.'); return; }
+    const was = parentOf(u);
+    registry[u].parent = r.uic;
+    saveRegistry();
+    regStatus(`${registry[u].name || u} is now under ${r.name || r.uic}` + (was ? ` (moved from ${registry[was]?.name || was}).` : '.'));
+    renderEditor();
+    return;
+  }
+  const unlink = e.target.closest('[data-unlink]');
+  if (unlink) {
+    const u = unlink.dataset.unlink;
+    registry[u].parent = '';
+    saveRegistry();
+    regStatus(`${registry[u].name || u} removed from ${r.name || r.uic}; it is now top level.`);
+    renderEditor();
+    return;
+  }
+
+  const del = e.target.closest('[data-dellog]');
+  if (del) {
+    r.log = r.log.filter(x => x.id !== del.dataset.dellog);
+    saveRegistry();
+    renderEditor();
+    return;
+  }
+  if (e.target.id === 'log-add') {
+    const start = $('logStart').value.trim(), end = $('logEnd').value.trim();
+    const hint = msg => { $('logHint').textContent = msg; $('logHint').style.color = 'var(--port)'; };
+    if (!isDate(start)) return hint('Pick a "From" date.');
+    if (end && !isDate(end)) return hint('"To" must be a date or left blank.');
+    if (end && end < start) return hint('"To" can\'t be before "From".');
+    r.log.push({ id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      item: $('logItem').value, status: $('logStatus').value, start, end, note: $('logNote').value.trim(),
+      added: new Date().toISOString().slice(0, 10) });
+    saveRegistry();
+    regStatus('Entry added.');
+    renderEditor();
+  }
+});
+
+// Export / import so the log survives cleared browser data and can be shared.
+$('reg-export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify({ type: 'eucfr-command-registry', version: 1, exported: new Date().toISOString(), commands: registry }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `eucfr-commands-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  regStatus(`Exported ${Object.keys(registry).length} commands.`);
+});
+
+$('reg-import').addEventListener('click', () => $('regImportFile').click());
+$('regImportFile').addEventListener('change', e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let data;
+    try { data = JSON.parse(reader.result); } catch { regStatus(`${f.name} isn't a valid export file.`); return; }
+    const incoming = data?.type === 'eucfr-command-registry' ? data.commands : null;
+    if (!incoming || typeof incoming !== 'object') { regStatus(`${f.name} isn't a Command Editor export.`); return; }
+    let added = 0, merged = 0, entries = 0;
+    for (const [uic, src] of Object.entries(incoming)) {
+      if (!src || typeof src !== 'object' || !/^[0-9A-Z]{5,6}$/i.test(uic)) continue;
+      const key = uic.toUpperCase();
+      let rec = registry[key];
+      if (!rec) { rec = registry[key] = newRecord(key, String(src.name ?? '')); added++; } else merged++;
+      for (const fld of ['name', 'sndl', 'notes', 'parent']) if (!rec[fld] && src[fld]) rec[fld] = String(src[fld]);
+      for (const a of Array.isArray(src.aliases) ? src.aliases : []) if (a !== rec.name && !rec.aliases.includes(a)) rec.aliases.push(String(a));
+      if (MONTH_RE.test(src.firstSeen ?? '') && (!rec.firstSeen || src.firstSeen < rec.firstSeen)) rec.firstSeen = src.firstSeen;
+      if (MONTH_RE.test(src.lastSeen ?? '') && (!rec.lastSeen || src.lastSeen > rec.lastSeen)) { rec.lastSeen = src.lastSeen; rec.lastSailors = src.lastSailors ?? null; }
+      const sig = e => [e.item, e.status, e.start, e.end || '', e.note || ''].join('|');
+      const have = new Set(rec.log.map(sig));
+      for (const le of Array.isArray(src.log) ? src.log : []) {
+        if (!logItem[le?.item] || !['yes', 'no'].includes(le.status)) continue;
+        const start = toLogDate(le.start, 'start'), end = le.end ? toLogDate(le.end, 'end') : '';
+        if (!start || end === null) continue;
+        const entry = { item: le.item, status: le.status, start, end, note: String(le.note ?? '') };
+        if (have.has(sig(entry))) continue;
+        rec.log.push({ id: String(le.id || `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`),
+          ...entry, added: le.added ?? '' });
+        have.add(sig(entry));
+        entries++;
+      }
+    }
+    saveRegistry();
+    regStatus(`Imported ${f.name}: ${added} new commands, ${merged} existing commands merged, ${entries} log entries added.`);
+    renderEditor();
+  };
+  reader.readAsText(f);
+});
+
+/* ===== COMPARISON ===== */
+
+const cmpFiles = [null, null]; // [older, newer]: { name, result, payMonth }
+let cmpThreshold = store.load('eucfr.cmpThreshold', 5);
+const cmpOpen = new Set(); // expanded sections
+
+function loadCmpFile(slot, f) {
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onerror = () => cmpStatus(`Could not read ${f.name}.`, true);
+  reader.onload = () => {
+    const result = normalize(parseCSV(reader.result));
+    if (!result.rows.length) { cmpStatus(`${f.name} has no sailor rows to compare.`, true); return; }
+    const payMonth = payMonthOf(result);
+    syncRegistry(commandsIn(result), payMonth);
+    cmpFiles[slot] = { name: f.name, result, payMonth };
+    let note = '';
+    // Keep the older file on the left, whichever box it was dropped on.
+    if (cmpFiles[0] && cmpFiles[1] && cmpFiles[0].payMonth > cmpFiles[1].payMonth) {
+      cmpFiles.reverse();
+      note = ' The files were swapped so the older pay month is on the left.';
+    }
+    cmpStatus(`Loaded ${f.name} (${payMonth ?? 'unknown month'}).${note}`);
+    renderCompare();
+  };
+  reader.readAsText(f);
+}
+
+function cmpStatus(msg, bad = false) {
+  $('cmpStatus').textContent = msg;
+  $('cmpStatus').style.color = bad ? 'var(--port)' : 'var(--stbd)';
+}
+
+document.querySelectorAll('.cmpslot').forEach(slotEl => {
+  const slot = +slotEl.dataset.slot;
+  const input = $('cmpFile' + slot);
+  slotEl.querySelector('[data-pick]').addEventListener('click', () => input.click());
+  input.addEventListener('change', e => { loadCmpFile(slot, e.target.files[0]); e.target.value = ''; });
+  slotEl.addEventListener('dragover', e => { e.preventDefault(); slotEl.classList.add('over'); });
+  slotEl.addEventListener('dragleave', () => slotEl.classList.remove('over'));
+  slotEl.addEventListener('drop', e => {
+    e.preventDefault(); slotEl.classList.remove('over');
+    const files = [...e.dataTransfer.files];
+    if (files.length >= 2) { loadCmpFile(0, files[0]); loadCmpFile(1, files[1]); } // both at once
+    else loadCmpFile(slot, files[0]);
+  });
+});
+
+// Sailor records for matching: { uic, command, name, grade, get }
+function sailorsOf(result) {
+  const getter = rowGetter(result);
+  return result.rows.map(r => {
+    const get = getter(r);
+    return { uic: get('UIC') ?? '(none)', command: get('COMMAND') ?? '', name: get('NAME') ?? '', grade: get('GRADE') ?? '', get };
+  });
+}
+
+// Pairs sailors across the two files. Names that appear once in each file are
+// matched directly; repeated names are matched by UIC, then by grade.
+function matchSailors(older, newer) {
+  const group = list => list.reduce((m, s) => (m.get(s.name) ?? m.set(s.name, []).get(s.name)).push(s) && m, new Map());
+  const A = group(older), B = group(newer);
+  const pairs = [], removed = [], added = [];
+  let ambiguous = 0;
+  for (const name of new Set([...A.keys(), ...B.keys()])) {
+    const a = [...(A.get(name) ?? [])], b = [...(B.get(name) ?? [])];
+    if (a.length === 1 && b.length === 1) { pairs.push([a[0], b[0]]); continue; }
+    for (const key of ['uic', 'grade']) {
+      for (let i = a.length - 1; i >= 0; i--) {
+        const j = b.findIndex(x => x[key] === a[i][key]);
+        if (j >= 0) { pairs.push([a[i], b[j]]); a.splice(i, 1); b.splice(j, 1); }
+      }
+    }
+    if (a.length && b.length) ambiguous++;
+    removed.push(...a);
+    added.push(...b);
+  }
+  return { pairs, removed, added, ambiguous };
+}
+
+function compareFiles(olderFile, newerFile, inScope, threshold) {
+  const older = sailorsOf(olderFile.result).filter(s => inScope(s.uic));
+  const newer = sailorsOf(newerFile.result).filter(s => inScope(s.uic));
+  // Matching runs on everyone so a transfer into or out of scope is still a transfer.
+  const all = matchSailors(sailorsOf(olderFile.result), sailorsOf(newerFile.result));
+  const payTypes = newerFile.result.columns.filter(c => c.type === 'bool').map(c => c.name);
+  const pay = s => s.get('NET PAY CURRENT MONTH');
+  const out = {
+    olderCount: older.length, newerCount: newer.length, ambiguous: all.ambiguous,
+    added: all.added.filter(s => inScope(s.uic)).map(s => ({ ...s, pay: pay(s) })),
+    removed: all.removed.filter(s => inScope(s.uic)).map(s => ({ ...s, pay: pay(s) })),
+    transferred: [], grade: [], payUp: [], payDown: [], special: [], meal: [], depn: [],
+  };
+  for (const [a, b] of all.pairs) {
+    if (!inScope(a.uic) && !inScope(b.uic)) continue;
+    const base = { name: b.name, command: b.command, grade: b.grade };
+    if (a.uic !== b.uic) out.transferred.push({ ...base, from: a.command, to: b.command });
+    if (a.grade !== b.grade) out.grade.push({ ...base, from: a.grade, to: b.grade });
+    const p0 = pay(a), p1 = pay(b);
+    if (typeof p0 === 'number' && typeof p1 === 'number' && p0 !== p1) {
+      const pct = percentChange(p0, p1);
+      if (pct === null || Math.abs(pct) > threshold) (p1 > p0 ? out.payUp : out.payDown).push({ ...base, prior: p0, current: p1, change: round(p1 - p0, 2), pct });
+    }
+    const gained = payTypes.filter(t => b.get(t) === true && a.get(t) !== true);
+    const lost = payTypes.filter(t => a.get(t) === true && b.get(t) !== true);
+    if (gained.length || lost.length) out.special.push({ ...base, gained: gained.join(', '), lost: lost.join(', ') });
+    const m0 = a.get('MEAL DEDS') !== null, m1 = b.get('MEAL DEDS') !== null;
+    if (m0 !== m1) out.meal.push({ ...base, change: m1 ? 'Started' : 'Stopped' });
+    if ((a.get('DEPN CODE') ?? '') !== (b.get('DEPN CODE') ?? '')) out.depn.push({ ...base, from: a.get('DEPN CODE') ?? '(blank)', to: b.get('DEPN CODE') ?? '(blank)' });
+  }
+  const byCmd = (x, y) => (x.command || '').localeCompare(y.command || '') || x.name.localeCompare(y.name);
+  for (const k of ['added', 'removed', 'transferred', 'grade', 'special', 'meal', 'depn']) out[k].sort(byCmd);
+  out.payUp.sort((x, y) => (y.pct ?? Infinity) - (x.pct ?? Infinity));
+  out.payDown.sort((x, y) => (x.pct ?? -Infinity) - (y.pct ?? -Infinity));
+  return out;
+}
+
+// Scope choices: all, each command, and each command together with its units.
+function renderCmpScope() {
+  const seen = new Map();
+  for (const f of cmpFiles) for (const c of commandsIn(f.result)) seen.set(c.uic, { uic: c.uic, name: c.name });
+  const present = [...seen.values()];
+  const inFile = new Set(seen.keys());
+  const prev = $('cmpScope').value;
+  const parents = Object.values(registry).filter(r => descendantsOf(r.uic).some(u => inFile.has(u)))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  $('cmpScope').innerHTML = '<option value="all">All commands</option>' +
+    (parents.length ? '<optgroup label="A command and its units">' + parents.map(r =>
+      `<option value="tree:${esc(r.uic)}">${esc(r.name || r.uic)} and units</option>`).join('') + '</optgroup>' : '') +
+    '<optgroup label="One command">' + treeOrder(present).map(({ item, depth }) =>
+      `<option value="one:${esc(item.uic)}">${'  '.repeat(depth)}${esc(item.name)} (${esc(item.uic)})</option>`).join('') + '</optgroup>';
+  $('cmpScope').value = [...$('cmpScope').options].some(o => o.value === prev) ? prev : 'all';
+}
+
+function scopeFilter() {
+  const v = $('cmpScope').value;
+  if (v.startsWith('one:')) { const u = v.slice(4); return uic => uic === u; }
+  if (v.startsWith('tree:')) { const set = new Set([v.slice(5), ...descendantsOf(v.slice(5))]); return uic => set.has(uic); }
+  return () => true;
+}
+
+const CMP_SECTIONS = [
+  { id: 'added',       label: 'Added' },
+  { id: 'removed',     label: 'Removed' },
+  { id: 'transferred', label: 'Transferred' },
+  { id: 'grade',       label: 'Grade changes' },
+  { id: 'payUp',       label: 'Pay increases' },
+  { id: 'payDown',     label: 'Pay decreases' },
+  { id: 'special',     label: 'Special pays gained or lost' },
+  { id: 'meal',        label: 'Meal deductions started or stopped' },
+  { id: 'depn',        label: 'Dependency status changes' },
+];
+
+function cmpTable(id, rows, m0, m1) {
+  if (!rows.length) return '<p class="empty">No changes.</p>';
+  const who = [{ label: 'Command', value: r => r.command }, { label: 'Name', value: r => r.name }, { label: 'Grade', value: r => r.grade }];
+  const payCols = [
+    { label: `Net pay (${m0})`, type: 'money', value: r => r.prior },
+    { label: `Net pay (${m1})`, type: 'money', value: r => r.current },
+    { label: 'Change $', type: 'money', value: r => r.change, cls: r => r.change >= 0 ? 'up' : 'down' },
+    { label: 'Change %', value: r => r.pct === null ? 'From $0' : `${r.pct > 0 ? '+' : ''}${r.pct.toFixed(2)}%`, cls: r => (r.change >= 0 ? 'up' : 'down') + ' num' }];
+  const cols = {
+    added:       [...who, { label: `Net pay (${m1})`, type: 'money', value: r => r.pay }],
+    removed:     [...who, { label: `Net pay (${m0})`, type: 'money', value: r => r.pay }],
+    transferred: [{ label: 'Name', value: r => r.name }, { label: 'Grade', value: r => r.grade }, { label: `From (${m0})`, value: r => r.from }, { label: `To (${m1})`, value: r => r.to }],
+    grade:       [{ label: 'Command', value: r => r.command }, { label: 'Name', value: r => r.name }, { label: `Grade (${m0})`, value: r => r.from }, { label: `Grade (${m1})`, value: r => r.to }],
+    payUp: [...who, ...payCols], payDown: [...who, ...payCols],
+    special:     [...who, { label: 'Gained', value: r => r.gained, cls: () => 'up' }, { label: 'Lost', value: r => r.lost, cls: () => 'down' }],
+    meal:        [...who, { label: 'Meal deductions', value: r => r.change }],
+    depn:        [...who, { label: `${m0}`, value: r => r.from }, { label: `${m1}`, value: r => r.to }],
+  }[id];
+  return table(cols, rows);
+}
+
+function renderCompare() {
+  [0, 1].forEach(i => {
+    const f = cmpFiles[i];
+    $('cmpInfo' + i).innerHTML = f
+      ? `<b>${esc(f.payMonth ?? 'Unknown month')}</b><span class="dot">&middot;</span><b>${f.result.rows.length.toLocaleString()}</b> sailors<span class="dot">&middot;</span>${esc(f.name)}`
+      : 'Not loaded';
+    document.querySelector(`.cmpslot[data-slot="${i}"]`).classList.toggle('loaded', !!f);
+    document.querySelector(`.cmpslot[data-slot="${i}"] [data-pick]`).textContent =
+      `${f ? 'Replace' : 'Upload'} ${i ? 'newer' : 'older'} eUCFR`;
+  });
+  const ready = cmpFiles[0] && cmpFiles[1];
+  $('cmpOptions').hidden = !ready;
+  if (!ready) { $('cmpBody').innerHTML = ''; return; }
+
+  renderCmpScope();
+  const [o, n] = cmpFiles;
+  const R = compareFiles(o, n, scopeFilter(), cmpThreshold);
+
+  let html = '';
+  if (o.payMonth === n.payMonth) html += `<div class="notice">Both files are for the same pay month (${esc(o.payMonth)}). Check that you uploaded the two months you meant to compare.</div>`;
+  if (R.ambiguous) html += `<div class="notice">${R.ambiguous} name${R.ambiguous === 1 ? '' : 's'} appear more than once and couldn't all be matched; those sailors are listed as added and removed.</div>`;
+  html += '<div class="readout">' +
+    `<div class="rblock"><h3>Sailors</h3><p class="stat"><strong>${R.olderCount.toLocaleString()}</strong>${esc(o.payMonth)}</p>` +
+      `<p class="stat"><strong>${R.newerCount.toLocaleString()}</strong>${esc(n.payMonth)}</p></div>` +
+    CMP_SECTIONS.map(s => `<div class="rblock"><h3>${esc(s.label)}</h3><p class="stat"><strong>${R[s.id].length.toLocaleString()}</strong>sailor${R[s.id].length === 1 ? '' : 's'}</p></div>`).join('') +
+    '</div>';
+  html += '<div class="toolbar"><button class="btn" data-cmpact="expand">Expand all</button><button class="btn" data-cmpact="collapse">Collapse all</button></div>';
+  html += CMP_SECTIONS.map(s => {
+    const rows = R[s.id];
+    const sub = s.id === 'payUp' || s.id === 'payDown' ? ` &middot; over &plusmn;${cmpThreshold}%` : '';
+    return `<details class="cmd ${rows.length ? 'has' : 'clear'}" data-cmpsec="${s.id}"${cmpOpen.has(s.id) ? ' open' : ''}>` +
+      `<summary><span class="nm">${esc(s.label)}</span><span class="uic">${rows.length} sailor${rows.length === 1 ? '' : 's'}${sub}</span></summary>` +
+      `<div class="cmdbody"><div class="sub">${cmpTable(s.id, rows, o.payMonth, n.payMonth)}</div></div></details>`;
+  }).join('');
+  $('cmpBody').innerHTML = html;
+}
+
+$('cmpScope').addEventListener('change', renderCompare);
+$('cmpThreshold').value = cmpThreshold;
+$('cmpThreshold').addEventListener('input', () => {
+  const v = $('cmpThreshold').value, n = Number(v);
+  const ok = v !== '' && Number.isFinite(n) && n >= 0;
+  $('cmpThreshold').classList.toggle('invalid', !ok);
+  if (!ok) return;
+  cmpThreshold = n;
+  store.save('eucfr.cmpThreshold', cmpThreshold);
+  renderCompare();
+});
+$('cmpBody').addEventListener('toggle', e => {
+  const d = e.target.closest?.('details[data-cmpsec]');
+  if (!d) return;
+  if (d.open) cmpOpen.add(d.dataset.cmpsec); else cmpOpen.delete(d.dataset.cmpsec);
+}, true);
+$('cmpBody').addEventListener('click', e => {
+  const act = e.target.closest('[data-cmpact]')?.dataset.cmpact;
+  if (act) document.querySelectorAll('#cmpBody details[data-cmpsec]').forEach(d => { d.open = act === 'expand'; });
+});
+
+/* ===== SETTINGS: THEMES ===== */
+
+const THEMES = [
+  { id: 'slate',      name: 'Slate',      note: 'Easy on the eyes',    swatch: ['#1b2126', '#232b31', '#d3a03c', '#e9ecee'] },
+  { id: 'chart',      name: 'Bright',     note: 'Hurts my eyes',       swatch: ['#f2f6fb', '#ffffff', '#1d4f8f', '#12243c'] },
+  { id: 'halloween',  name: 'Halloween',  note: 'Spooky!',             swatch: ['#141019', '#2a2034', '#ff8b25', '#b98cf0'] },
+  { id: 'submarines', name: 'Submariner', note: '...and proud of it!', swatch: ['#fff2f8', '#ffe1ef', '#e5399b', '#2dd4bf'] },
+];
+let theme = store.load('eucfr.theme', 'slate');
+if (!THEMES.some(t => t.id === theme)) theme = 'slate';
+const applyTheme = () => document.documentElement.setAttribute('data-theme', theme);
+
+function renderThemes() {
+  $('themeRow').innerHTML = THEMES.map(t =>
+    `<button type="button" class="themecard" data-theme="${t.id}" aria-pressed="${theme === t.id}">` +
+    `<span class="nm">${esc(t.name)}</span><span class="ds">${esc(t.note)}</span>` +
+    `<span class="swatches">${t.swatch.map(c => `<i style="background:${c}"></i>`).join('')}</span></button>`).join('');
+}
+$('themeRow').addEventListener('click', e => {
+  const btn = e.target.closest('[data-theme]');
+  if (!btn) return;
+  theme = btn.dataset.theme;
+  store.save('eucfr.theme', theme);
+  applyTheme();
+  renderThemes();
+});
+
+applyTheme();
+goTo('upload');
+</script>
+</body>
+</html>
